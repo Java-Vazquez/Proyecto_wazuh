@@ -4,15 +4,19 @@
  */
 package Wazuh;
 
+import java.nio.file.Path;
+import static java.nio.file.Paths.get;
+import java.util.ArrayList;
+
 /**
  *
  * @author javav
  */
 public class Interfaz extends javax.swing.JFrame {
 
-    /**
-     * Creates new form Interfaz
-     */
+    String id = "";
+    public String token = "";
+
     public Interfaz() {
         initComponents();
     }
@@ -29,16 +33,16 @@ public class Interfaz extends javax.swing.JFrame {
         conectar_boton = new javax.swing.JButton();
         grupos_box = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        lst_Grupos = new javax.swing.JList<>();
+        grupos = new javax.swing.JList<>();
         agentes_box = new javax.swing.JPanel();
-        cbox_Agentes = new javax.swing.JComboBox<>();
-        lbl_Critical = new javax.swing.JLabel();
-        lbl_Alto = new javax.swing.JLabel();
-        lbl_Baja = new javax.swing.JLabel();
-        lbl_Media = new javax.swing.JLabel();
-        lbl_Total = new javax.swing.JLabel();
-        vulnerabilidades_Label = new javax.swing.JLabel();
-        vulnerabilidades_cbox = new javax.swing.JComboBox<>();
+        agentes = new javax.swing.JComboBox<>();
+        cantidad_criticas = new javax.swing.JLabel();
+        cantidad_altas = new javax.swing.JLabel();
+        cantidad_bajas = new javax.swing.JLabel();
+        cantidad_medias = new javax.swing.JLabel();
+        total = new javax.swing.JLabel();
+        vulnerabilidad_nombre = new javax.swing.JLabel();
+        vulnerabilidades = new javax.swing.JComboBox<>();
         vulnerabilidades_scroll = new javax.swing.JScrollPane();
         lst_Urls = new javax.swing.JList<>();
         severidad_box = new javax.swing.JPanel();
@@ -47,6 +51,7 @@ public class Interfaz extends javax.swing.JFrame {
         rdi_media = new javax.swing.JRadioButton();
         rdi_baja = new javax.swing.JRadioButton();
         rdi_Todo = new javax.swing.JRadioButton();
+        buscar_boton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -54,13 +59,13 @@ public class Interfaz extends javax.swing.JFrame {
 
         grupos_box.setBorder(javax.swing.BorderFactory.createTitledBorder("Grupos"));
 
-        lst_Grupos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        lst_Grupos.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+        grupos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        grupos.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
-                lst_GruposValueChanged(evt);
+                gruposValueChanged(evt);
             }
         });
-        jScrollPane1.setViewportView(lst_Grupos);
+        jScrollPane1.setViewportView(grupos);
 
         javax.swing.GroupLayout grupos_boxLayout = new javax.swing.GroupLayout(grupos_box);
         grupos_box.setLayout(grupos_boxLayout);
@@ -80,13 +85,13 @@ public class Interfaz extends javax.swing.JFrame {
 
         agentes_box.setBorder(javax.swing.BorderFactory.createTitledBorder("Agentes"));
 
-        cbox_Agentes.addActionListener(new java.awt.event.ActionListener() {
+        agentes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cbox_AgentesActionPerformed(evt);
+                agentesActionPerformed(evt);
             }
         });
 
-        lbl_Total.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        total.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
 
         javax.swing.GroupLayout agentes_boxLayout = new javax.swing.GroupLayout(agentes_box);
         agentes_box.setLayout(agentes_boxLayout);
@@ -95,47 +100,47 @@ public class Interfaz extends javax.swing.JFrame {
             .addGroup(agentes_boxLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(agentes_boxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cbox_Agentes, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(agentes, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(agentes_boxLayout.createSequentialGroup()
                         .addGroup(agentes_boxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lbl_Critical, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(lbl_Alto, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(cantidad_criticas, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(cantidad_altas, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(18, 18, 18)
                         .addGroup(agentes_boxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lbl_Media, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(lbl_Baja, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(cantidad_medias, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(cantidad_bajas, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(0, 21, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(agentes_boxLayout.createSequentialGroup()
                 .addGap(31, 31, 31)
-                .addComponent(lbl_Total, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(total, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         agentes_boxLayout.setVerticalGroup(
             agentes_boxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(agentes_boxLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(cbox_Agentes, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(agentes, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addGroup(agentes_boxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(agentes_boxLayout.createSequentialGroup()
-                        .addComponent(lbl_Critical, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(cantidad_criticas, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
-                        .addComponent(lbl_Alto, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(cantidad_altas, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(agentes_boxLayout.createSequentialGroup()
-                        .addComponent(lbl_Media, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(cantidad_medias, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
-                        .addComponent(lbl_Baja, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(cantidad_bajas, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(18, 18, 18)
-                .addComponent(lbl_Total, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(total, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        vulnerabilidades_Label.setText("Vulnerabilidades:");
+        vulnerabilidad_nombre.setText("Vulnerabilidades:");
 
-        vulnerabilidades_cbox.addActionListener(new java.awt.event.ActionListener() {
+        vulnerabilidades.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                vulnerabilidades_cboxActionPerformed(evt);
+                vulnerabilidadesActionPerformed(evt);
             }
         });
 
@@ -214,6 +219,13 @@ public class Interfaz extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
+        buscar_boton.setText("Buscar");
+        buscar_boton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                buscar_botonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -222,9 +234,9 @@ public class Interfaz extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(vulnerabilidades_Label)
+                        .addComponent(vulnerabilidad_nombre)
                         .addGap(18, 18, 18)
-                        .addComponent(vulnerabilidades_cbox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(vulnerabilidades, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addComponent(vulnerabilidades_scroll)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -234,7 +246,10 @@ public class Interfaz extends javax.swing.JFrame {
                                 .addComponent(agentes_box, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
                                 .addComponent(severidad_box, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(conectar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(conectar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(buscar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(0, 74, Short.MAX_VALUE)))
                 .addContainerGap())
         );
@@ -248,55 +263,65 @@ public class Interfaz extends javax.swing.JFrame {
                     .addComponent(grupos_box, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(vulnerabilidades_Label, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(vulnerabilidades_cbox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(vulnerabilidad_nombre, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(vulnerabilidades, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addComponent(vulnerabilidades_scroll, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(conectar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(conectar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(buscar_boton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(29, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void lst_GruposValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_lst_GruposValueChanged
+    private void gruposValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_gruposValueChanged
 
-        
-    }//GEN-LAST:event_lst_GruposValueChanged
 
-    private void cbox_AgentesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbox_AgentesActionPerformed
-       
-    }//GEN-LAST:event_cbox_AgentesActionPerformed
+    }//GEN-LAST:event_gruposValueChanged
 
-    private void vulnerabilidades_cboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vulnerabilidades_cboxActionPerformed
+    private void agentesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_agentesActionPerformed
+        String Agente = agentes.getItemAt(agentes.getSelectedIndex());
+        System.out.println("Agente seleccionado " + Agente);
+        id = Agente.substring(0, 3);
+        resumen_vulnerabilidades(id);
+        //TaerVulnerabilidades(id);
+    }//GEN-LAST:event_agentesActionPerformed
 
-      
-    }//GEN-LAST:event_vulnerabilidades_cboxActionPerformed
+    private void vulnerabilidadesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vulnerabilidadesActionPerformed
+
+
+    }//GEN-LAST:event_vulnerabilidadesActionPerformed
 
     private void lst_UrlsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lst_UrlsMouseClicked
-     
+
     }//GEN-LAST:event_lst_UrlsMouseClicked
 
     private void rdi_CriticaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_CriticaActionPerformed
-      
+
     }//GEN-LAST:event_rdi_CriticaActionPerformed
 
     private void rdi_AltaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_AltaActionPerformed
-      
+
     }//GEN-LAST:event_rdi_AltaActionPerformed
 
     private void rdi_mediaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_mediaActionPerformed
-      
+
     }//GEN-LAST:event_rdi_mediaActionPerformed
 
     private void rdi_bajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_bajaActionPerformed
-     
+
     }//GEN-LAST:event_rdi_bajaActionPerformed
 
     private void rdi_TodoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_TodoActionPerformed
-     
+
     }//GEN-LAST:event_rdi_TodoActionPerformed
+
+    private void buscar_botonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buscar_botonActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_buscar_botonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -334,17 +359,17 @@ public class Interfaz extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JComboBox<String> agentes;
     private javax.swing.JPanel agentes_box;
-    private javax.swing.JComboBox<String> cbox_Agentes;
+    private javax.swing.JButton buscar_boton;
+    private javax.swing.JLabel cantidad_altas;
+    private javax.swing.JLabel cantidad_bajas;
+    private javax.swing.JLabel cantidad_criticas;
+    private javax.swing.JLabel cantidad_medias;
     private javax.swing.JButton conectar_boton;
+    private javax.swing.JList<String> grupos;
     private javax.swing.JPanel grupos_box;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JLabel lbl_Alto;
-    private javax.swing.JLabel lbl_Baja;
-    private javax.swing.JLabel lbl_Critical;
-    private javax.swing.JLabel lbl_Media;
-    private javax.swing.JLabel lbl_Total;
-    private javax.swing.JList<String> lst_Grupos;
     private javax.swing.JList<String> lst_Urls;
     private javax.swing.JRadioButton rdi_Alta;
     private javax.swing.JRadioButton rdi_Critica;
@@ -352,8 +377,22 @@ public class Interfaz extends javax.swing.JFrame {
     private javax.swing.JRadioButton rdi_baja;
     private javax.swing.JRadioButton rdi_media;
     private javax.swing.JPanel severidad_box;
-    private javax.swing.JLabel vulnerabilidades_Label;
-    private javax.swing.JComboBox<String> vulnerabilidades_cbox;
+    private javax.swing.JLabel total;
+    private javax.swing.JLabel vulnerabilidad_nombre;
+    private javax.swing.JComboBox<String> vulnerabilidades;
     private javax.swing.JScrollPane vulnerabilidades_scroll;
     // End of variables declaration//GEN-END:variables
+
+    private void resumen_vulnerabilidades(String id) {
+        String vulnera = get("/vulnerability/" + id + "/summary/severity", token);
+        ArrayList<String> decodificado = JsonDecoder.resumen_vulnerabilidades(vulnera);
+        cantidad_criticas.setText(decodificado.get(0));
+        cantidad_altas.setText(decodificado.get(1));
+        cantidad_medias.setText(decodificado.get(2));
+        cantidad_bajas.setText(decodificado.get(3));
+        int total_vulnerabilidades;
+        total_vulnerabilidades = Integer.parseInt(decodificado.get(1).substring(6)) + Integer.parseInt(decodificado.get(3).substring(6)) + Integer.parseInt(decodificado.get(0).substring(9)) + Integer.parseInt(decodificado.get(2).substring(7));
+        total.setText("Total: " + total_vulnerabilidades);
+
+    }
 }
