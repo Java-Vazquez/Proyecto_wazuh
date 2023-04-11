@@ -4,6 +4,14 @@
  */
 package wazuh;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 /**
  *
  * @author Javier
@@ -317,7 +325,6 @@ public class Interfaz extends javax.swing.JFrame {
 
     }//GEN-LAST:event_rdi_todasActionPerformed
 
-
     /**
      * @param args the command line arguments
      */
@@ -378,3 +385,4 @@ public class Interfaz extends javax.swing.JFrame {
     private javax.swing.JScrollPane vulnerabilidades_scroll;
     // End of variables declaration//GEN-END:variables
 }
+
