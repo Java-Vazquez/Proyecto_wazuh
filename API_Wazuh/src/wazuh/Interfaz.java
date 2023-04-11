@@ -67,6 +67,11 @@ public class Interfaz extends javax.swing.JFrame {
         });
 
         conectar_boton.setText("Conectar");
+        conectar_boton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                conectar_botonActionPerformed(evt);
+            }
+        });
 
         vulnerabilidades_lbl.setText("Vulnerabilidades:");
 
@@ -324,6 +329,12 @@ public class Interfaz extends javax.swing.JFrame {
     private void rdi_todasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rdi_todasActionPerformed
 
     }//GEN-LAST:event_rdi_todasActionPerformed
+
+    private void conectar_botonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_conectar_botonActionPerformed
+      Autenticacion conectando = new Autenticacion();
+      System.out.println(conectando);
+      System.out.println("Legué hasta aquí");
+    }//GEN-LAST:event_conectar_botonActionPerformed
 
     /**
      * @param args the command line arguments

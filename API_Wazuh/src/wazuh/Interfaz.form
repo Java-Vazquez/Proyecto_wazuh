@@ -93,6 +93,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Conectar"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="conectar_botonActionPerformed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JLabel" name="vulnerabilidades_lbl">
       <Properties>
