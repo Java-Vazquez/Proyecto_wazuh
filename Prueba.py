@@ -10,7 +10,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuration
 protocol = 'https'
-host = '192.168.68.120'
+host = '192.168.198.131'
 port = 55000
 user = 'wazuh'
 password = 'wazuh'
@@ -42,5 +42,5 @@ print("\nGetting agents status summary:")
 #response = requests.get(f"{protocol}://{host}:{port}/agents/summary/status?pretty=true", headers=requests_headers, verify=False)
 response = requests.get(f"{protocol}://{host}:{port}/agents?status=active&pretty=true", headers=requests_headers, verify=False)
 print(response.text)
-print(json.loads(response.content.decode())['data']['affected_items'][0]['os']['name'])
+print(json.loads(response.content.decode())['data']['affected_items'][1]['name'])
 print("\nEnd of the script.\n")
