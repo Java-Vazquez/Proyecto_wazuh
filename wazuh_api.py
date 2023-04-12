@@ -1,4 +1,8 @@
 import tkinter as tk
+import json
+import requests
+import urllib3
+from base64 import b64encode
 
 ventana = tk.Tk()
 
@@ -6,7 +10,7 @@ ventana = tk.Tk()
 ventana.title("Consulta Wazuh")
 
 # Define las dimensiones de la ventana
-ventana.geometry("900x200")
+ventana.geometry("900x400")
 
 # Crea el frame principal
 frame_principal = tk.Frame(ventana)
@@ -90,6 +94,32 @@ def actualizar_vulnerabilidad(*args):
         valor = menu_vulnerabilidades.get(indice)
         vulnerabilidad_seleccionada.set(valor)
 
+# Función para conectarse a la API
+def conectarse(*args):
+    # Disable insecure https warnings (for self-signed SSL certificates)
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # Configuration
+    protocol = 'https'
+    host = '192.168.68.120'
+    port = 55000
+    user = 'wazuh'
+    password = 'wazuh'
+    login_endpoint = 'security/user/authenticate'
+
+    login_url = f"{protocol}://{host}:{port}/{login_endpoint}"
+    basic_auth = f"{user}:{password}".encode()
+    login_headers = {'Content-Type': 'application/json','Authorization': f'Basic {b64encode(basic_auth).decode()}'}
+
+    print("\nLogin request ...\n")
+    response = requests.post(login_url, headers=login_headers, verify=False)
+    token = json.loads(response.content.decode())['data']['token']
+    print(token)
+
+# New authorization header with the JWT token we got
+    requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+
+    print("\n- API calls with TOKEN environment variable ...\n")
 
 # Función para obtener la selección actual de ambas listas
 def obtener_selecciones():
@@ -106,6 +136,7 @@ def obtener_selecciones():
     print("Agente seleccionado:", agente)
     print("Grupo seleccionado:", grupo)
     print("Severidad seleccionada:", severidad)
+    print("Vulnerabilidad seleccionada:", vulnerabilidad)
 
 #Función para actualizar la selección de la vulnerabilidad
 def actualizar_vulnerabilidad(*args):
@@ -136,10 +167,14 @@ menu_vulnerabilidades.bind("<<MenuSelect>>", actualizar_vulnerabilidad)
 
 #Crea el cuadro de resultados
 resultados_text = tk.Text(frame_resultados, height=10)
-resultados_text.pack(side=tk.BOTTOM, fill=tk.BOTH, padx=10, pady=10)
+resultados_text.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10)
 
 # Crea el botón de Consultar
 btn_consultar = tk.Button(ventana, text="Consultar", command=obtener_selecciones)
+btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+
+# Crea el botón de Conectar
+btn_consultar = tk.Button(ventana, text="Conectar", command=conectarse)
 btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
 
 ventana.mainloop()

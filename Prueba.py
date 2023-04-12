@@ -1,47 +1,46 @@
 #!/usr/bin/env python3
 
 import json
-from base64 import b64encode
-import requests  # To install requests, use: pip install requests
+import requests
 import urllib3
-
-# Configuration
-endpoint = '/agents?select=lastKeepAlive&select=id&status=disconnected'
-
-protocol = 'https'
-host = 'localhost'
-port = '55000'
-user = 'admin'
-password = 'admin'
+from base64 import b64encode
 
 # Disable insecure https warnings (for self-signed SSL certificates)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Functions
-def get_response(request_method, url, headers, verify=False, body=None):
-    """Get API result"""
-    if body is None:
-        body = {}
+# Configuration
+protocol = 'https'
+host = '192.168.68.120'
+port = 55000
+user = 'wazuh'
+password = 'wazuh'
+login_endpoint = 'security/user/authenticate'
 
-    request_result = getattr(requests, request_method.lower())(url, headers=headers, verify=verify, data=body)
-
-    if request_result.status_code == 200:
-        return json.loads(request_result.content.decode())
-    else:
-        raise Exception(f"Error obtaining response: {request_result.json()}")
-
-# Variables
-base_url = f"{protocol}://{host}:{port}"
-login_url = f"{base_url}/security/user/authenticate"
+login_url = f"{protocol}://{host}:{port}/{login_endpoint}"
 basic_auth = f"{user}:{password}".encode()
-headers = {
-           'Authorization': f'Basic {b64encode(basic_auth).decode()}',
-           'Content-Type': 'application/json'
-           }
-headers['Authorization'] = f'Bearer {get_response("POST", login_url, headers)["data"]["token"]}'
+login_headers = {'Content-Type': 'application/json',
+                 'Authorization': f'Basic {b64encode(basic_auth).decode()}'}
 
-# Request
-response = get_response("GET", url=base_url + endpoint, headers=headers)
+print("\nLogin request ...\n")
+response = requests.post(login_url, headers=login_headers, verify=False)
+token = json.loads(response.content.decode())['data']['token']
+print(token)
 
-# WORK WITH THE RESPONSE AS YOU LIKE
-print(json.dumps(response, indent=4, sort_keys=True))
+# New authorization header with the JWT token we got
+requests_headers = {'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {token}'}
+
+print("\n- API calls with TOKEN environment variable ...\n")
+
+print("Getting API information:")
+
+response = requests.get(f"{protocol}://{host}:{port}/?pretty=true", headers=requests_headers, verify=False)
+print(response.text)
+
+print("\nGetting agents status summary:")
+
+#response = requests.get(f"{protocol}://{host}:{port}/agents/summary/status?pretty=true", headers=requests_headers, verify=False)
+response = requests.get(f"{protocol}://{host}:{port}/agents?status=active&pretty=true", headers=requests_headers, verify=False)
+print(response.text)
+print(json.loads(response.content.decode())['data']['affected_items'][0]['os']['name'])
+print("\nEnd of the script.\n")
