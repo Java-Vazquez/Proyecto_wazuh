@@ -3,11 +3,17 @@ import json
 import requests
 import urllib3
 from base64 import b64encode
+
+protocol = 'https'
+host = '192.168.198.131'
+port = 55000
+token = ""
+requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
 ventana = tk.Tk()
 # Define el título de la ventana
 ventana.title("Consulta Wazuh")
 # Define las dimensiones de la ventana
-ventana.geometry("900x300")
+ventana.geometry("1200x300")
 # Crea el frame principal
 frame_principal = tk.Frame(ventana)
 frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -38,15 +44,16 @@ lbl_vulnerabilidades.pack(side=tk.TOP)
 # Define las opciones de los agentes ,los grupos y vulnerabilidades
 opciones_agentes = tk.StringVar(value=[])
 opciones_grupos = tk.StringVar(value=[])
-opciones_vulnerabilidades = ["CVE-2021-1234", "CVE-2021-5678", "CVE-2021-9012", "CVE-2021-3456", "CVE-2021-7890"]
+opciones_vulnerabilidades = [] # una lista vacía
+opciones_vulnerabilidades_str = tk.StringVar(value=",".join(opciones_vulnerabilidades)) # convertir la lista en una cadena y asignarla a una variable de tipo StringVar
 # Define las opciones del menú de Severidad
-opciones_severidad = ["Todas", "Críticas", "Altas", "Medias", "Bajas"]
+opciones_severidad = ["Todas", "Críticas", "Altas", "Medias", "Bajas", "None"]
 
 # Variables para almacenar las selecciones de las listas
 agente_seleccionado = tk.StringVar()
 grupo_seleccionado = tk.StringVar()
-severidad_seleccionado = tk.StringVar()
-vulnerabilidad_seleccionada = tk.StringVar()
+severidad_seleccionado = tk.StringVar(value="Seleccione un nivel de severidad")
+vulnerabilidad_seleccionada = tk.StringVar(value="Seleccione una vulnerabilidad")
 
 # Función para actualizar la selección del agente
 def actualizar_agente(*args):
@@ -81,16 +88,89 @@ def actualizar_vulnerabilidad(*args):
         vulnerabilidad_seleccionada.set(valor)
 
 # Función para obtener la selección actual de ambas listas
-def obtener_selecciones():
+def consultar(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    vulnera = []
     agente = agente_seleccionado.get()
     grupo = grupo_seleccionado.get()
     severidad = severidad_seleccionado.get()
     vulnerabilidad = vulnerabilidad_seleccionada.get()
     resultados_text.delete("1.0", tk.END)
-    resultados_text.insert(tk.END, "Agente seleccionado: " + agente + "\n")
-    resultados_text.insert(tk.END, "Grupo seleccionado: " + grupo + "\n")
-    resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-    resultados_text.insert(tk.END, "Vulnerabilidad seleccionada: " + vulnerabilidad + "\n")
+    
+    if severidad == "Todas":
+        resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
+        todas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+        todas.raise_for_status()
+        datos = json.loads(todas.text)
+        try: 
+            if 'data' in datos and 'affected_items' in datos['data']:
+                for item in datos['data']['affected_items']:
+                    if 'title' in item:
+                        resultados_text.insert(tk.END, item['title'] + "\n")
+        except requests.exceptions.HTTPError as error:
+            print(f"Error al hacer la petición: {error}")
+
+    elif severidad =="Críticas":
+        resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
+        criticas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,&pretty=true", headers=requests_headers, verify=False)
+        criticas.raise_for_status()
+        datos = json.loads(criticas.text)
+        try: 
+            if 'data' in datos and 'affected_items' in datos['data']:
+                for item in datos['data']['affected_items']:
+                    if 'title' in item:
+                        resultados_text.insert(tk.END, item['title'] + "\n")
+        except requests.exceptions.HTTPError as error:
+            print(f"Error al hacer la petición: {error}")
+
+
+    elif severidad == "Altas":
+        resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
+        altas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=High&pretty=true", headers=requests_headers, verify=False)
+        altas.raise_for_status()
+        datos = json.loads(altas.text)
+        try: 
+            if 'data' in datos and 'affected_items' in datos['data']:
+                for item in datos['data']['affected_items']:
+                    if 'title' in item:
+                        resultados_text.insert(tk.END, item['title'] + "\n")
+        except requests.exceptions.HTTPError as error:
+            print(f"Error al hacer la petición: {error}")
+
+    elif severidad == "Medias": 
+        resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
+        medias = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Medium&pretty=true", headers=requests_headers, verify=False)
+        medias.raise_for_status()
+        datos = json.loads(medias.text)
+        try: 
+            if 'data' in datos and 'affected_items' in datos['data']:
+                for item in datos['data']['affected_items']:
+                    if 'title' in item:
+                        resultados_text.insert(tk.END, item['title'] + "\n")
+        except requests.exceptions.HTTPError as error:
+            print(f"Error al hacer la petición: {error}")
+
+    elif severidad == "Bajas":
+        resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
+        bajas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&pretty=true", headers=requests_headers, verify=False)
+        bajas.raise_for_status()
+        datos = json.loads(bajas.text)
+        try: 
+            if 'data' in datos and 'affected_items' in datos['data']:
+                for item in datos['data']['affected_items']:
+                    if 'title' in item:
+                        resultados_text.insert(tk.END, item['title'] + "\n")
+        except requests.exceptions.HTTPError as error:
+            print(f"Error al hacer la petición: {error}")
+    else:
+        severidad = severidad
+
+    #resultados_text.insert(tk.END, "Agente seleccionado: " + agente + "\n")
+    #resultados_text.insert(tk.END, "Grupo seleccionado: " + grupo + "\n")
+    #resultados_text.insert(tk.END, "Vulnerabilidad seleccionada: " + vulnerabilidad + "\n")
 
     print("Agente seleccionado:", agente)
     print("Grupo seleccionado:", grupo)
@@ -111,6 +191,8 @@ def conectarse(*args):
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     # Configuration
+    global token
+    global requests_headers 
     protocol = 'https'
     host = '192.168.198.131'
     port = 55000
@@ -131,8 +213,9 @@ def conectarse(*args):
     print("\n- API calls with TOKEN environment variable ...\n")
     opciones = []
 
+    #Solicitud y proceso para obtener y mostrar los agentes y grupos
     response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False) # Solicitud de los agentes
-    print(response.text) #Imprime el Json
+    #print(response.text) #Imprime el Json
     resp = json.loads(response.content.decode())['data']['affected_items'] #Así se convierte y maneja como un objeto por bloques 
 
     for i in resp:
@@ -152,11 +235,31 @@ def conectarse(*args):
     opciones_grupos.set(grupos_str) # Asignar la cadena al objeto opciones_grupos para actualizar la vista
     print(opciones_agentes.get()) # Imprimir la lista completa de nombres
     print(list(set(grupos)))
-    return grupos
+
+    # Solicitud para las severidades existentes
+    response2 = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+    data2 = json.loads(response2.text)
+    vulnerabilidades = []
+    for vul in data2['data']['affected_items']:
+        if 'cve' in vul:
+            cves = vul['cve']
+        if isinstance(cves, list):
+            vulnerabilidades += cves
+        else:
+            vulnerabilidades.append(cves)
+    opciones_vulnerabilidades = vulnerabilidades
+    opciones_vulnerabilidades_str.set(" ".join(opciones_vulnerabilidades)) # actualizar el valor de la variable StringVar con la nueva lista de opciones
+    
+    menu_vulnerabilidades['menu'].delete(0, 'end')
+    for vulnerabilidad in opciones_vulnerabilidades:
+        menu_vulnerabilidades['menu'].add_command(label=vulnerabilidad, command=lambda v=vulnerabilidad: vulnerabilidad_seleccionada.set(v))
+    print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
+    #return grupos 
+    #return vulnerabilidades
 
 
 # Crea las listas para los agentes y los grupos
-lista_agentes = tk.Listbox(frame_agentes, selectmode="single", exportselection=False, listvariable=opciones_agentes, width=20)
+lista_agentes = tk.Listbox(frame_agentes, selectmode="single", exportselection=False, listvariable=opciones_agentes, width=25)
 lista_agentes.pack(side=tk.TOP)
 lista_agentes.bind("<<ListboxSelect>>", actualizar_agente)
 lista_grupos = tk.Listbox(frame_grupos, selectmode="single", exportselection=False, listvariable=opciones_grupos, width=20)
@@ -168,7 +271,8 @@ menu_severidad.pack(side=tk.TOP, padx=10, pady=10)
 menu_severidad.bind("<<MenuSelect>>", actualizar_severidad)
 
 #Crea el menú de Vulnerabilidades
-menu_vulnerabilidades = tk.OptionMenu(frame_vulnerabilidades, vulnerabilidad_seleccionada, *opciones_vulnerabilidades)
+opciones_vulnerabilidades_str.set(",".join(opciones_vulnerabilidades)) # asignar el valor inicial de la lista de opciones a la variable StringVar
+menu_vulnerabilidades = tk.OptionMenu(frame_vulnerabilidades, vulnerabilidad_seleccionada, opciones_vulnerabilidades_str)
 menu_vulnerabilidades.pack(side=tk.TOP, padx=10, pady=10)
 menu_vulnerabilidades.bind("<<MenuSelect>>", actualizar_vulnerabilidad)
 
@@ -181,7 +285,7 @@ btn_consultar = tk.Button(ventana, text="Conectar", command=conectarse)
 btn_consultar.pack(side=tk.LEFT, padx=10, pady=10)
 
 # Crea el botón de Consultar
-btn_consultar = tk.Button(ventana, text="Consultar", command=obtener_selecciones)
+btn_consultar = tk.Button(ventana, text="Consultar", command=consultar)
 btn_consultar.pack(side=tk.LEFT, padx=10, pady=10)
 
 #Loop principal para la visualización
