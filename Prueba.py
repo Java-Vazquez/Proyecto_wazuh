@@ -46,8 +46,7 @@ response = requests.get(f"{protocol}://{host}:{port}/agents?status=active&pretty
 
 #EJEMPLO DE BUSQUEDA POR VULNERABILIDADES
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&limit=800", headers=requests_headers, verify=False)
-vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
-
-
+#vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/show?search=", headers=requests_headers, verify=False)
 print(vulnerabilidades.text)
 print("\nEnd of the script.\n")

@@ -13,7 +13,7 @@ ventana = tk.Tk()
 # Define el título de la ventana
 ventana.title("Consulta Wazuh")
 # Define las dimensiones de la ventana
-ventana.geometry("1200x300")
+ventana.geometry("1200x400")
 # Crea el frame principal
 frame_principal = tk.Frame(ventana)
 frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -27,7 +27,9 @@ frame_severidad.pack(side=tk.LEFT, fill=tk.Y, padx=10)
 frame_vulnerabilidades = tk.Frame(frame_principal)
 frame_vulnerabilidades.pack(side=tk.LEFT, fill=tk.Y, padx=10)
 frame_resultados = tk.Frame(frame_principal)
-frame_resultados.pack(side=tk.BOTTOM, fill=tk.BOTH, padx=10, pady=10, expand=True)
+frame_resultados.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
+frame_entrada = tk.Frame(frame_principal)
+frame_entrada.pack(side=tk.BOTTOM, fill=tk.BOTH, padx=10, pady=10, expand=True)
 # Etiqueta para la lista de Agentes
 lbl_agentes = tk.Label(frame_agentes, text="Agentes:")
 lbl_agentes.pack(side=tk.TOP)
@@ -177,6 +179,9 @@ def consultar(*args):
     print("Severidad seleccionada:", severidad)
     print("Vulnerabilidad seleccionada:", vulnerabilidad)
 
+def buscar(*args):
+    return
+
 #Función para actualizar la selección de la vulnerabilidad
 def actualizar_vulnerabilidad(*args):
     seleccion = menu_vulnerabilidades.curselection()
@@ -279,6 +284,14 @@ menu_vulnerabilidades.bind("<<MenuSelect>>", actualizar_vulnerabilidad)
 #Crea el cuadro de resultados
 resultados_text = tk.Text(frame_resultados, height=10)
 resultados_text.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10)
+
+#Crea cuadro de entrada y botón de enviar
+etiqueta = tk.Label(frame_entrada, text="Ingrese la palabra clave para la búsqueda de vulnerabilidades:")
+etiqueta.pack(side=tk.TOP)
+entrada = tk.Entry(frame_entrada, font=("Arial", 12))
+entrada.pack()
+boton = tk.Button(frame_entrada, text="Buscar", command=buscar)
+boton.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Conectar
 btn_consultar = tk.Button(ventana, text="Conectar", command=conectarse)
