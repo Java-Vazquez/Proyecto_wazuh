@@ -5,7 +5,7 @@ import urllib3
 from base64 import b64encode
 
 protocol = 'https'
-host = '192.168.198.131'
+host = '192.168.68.120'
 port = 55000
 token = ""
 requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
@@ -170,7 +170,6 @@ def consultar_severidad(*args):
     #resultados_text.insert(tk.END, "Grupo seleccionado: " + grupo + "\n")
     #resultados_text.insert(tk.END, "Vulnerabilidad seleccionada: " + vulnerabilidad + "\n")
 
-    print("Grupo seleccionado:", grupo)
     print("Severidad seleccionada:", severidad)
 
 def consultar_cve (*args):
@@ -246,9 +245,9 @@ def conectarse(*args):
     # Configuration
     global token
     global requests_headers 
-    protocol = 'https'
-    host = '192.168.198.131'
-    port = 55000
+    global protocol 
+    global host
+    global port 
     user = 'wazuh'
     password = 'wazuh'
     login_endpoint = 'security/user/authenticate'
@@ -305,6 +304,21 @@ def conectarse(*args):
         menu_vulnerabilidades['menu'].add_command(label=vulnerabilidad, command=lambda v=vulnerabilidad: vulnerabilidad_seleccionada.set(v))
     print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
 
+def ir_extras (*args):
+    protocol = 'https'
+    host = '192.168.68.120'
+    port = 55000
+    token = ""
+    requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+    ventana_extra = tk.Toplevel()
+    ventana_extra.title("Opciones avanzadas")
+    ventana_extra.geometry("1200x400")
+    # Crea el frame principal
+    frame_principal = tk.Frame(ventana_extra)
+    frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    # Crea los frames para cada elemento
+    frame_agentes = tk.Frame(frame_principal)
+    frame_agentes.pack(side=tk.LEFT, fill=tk.Y, padx=10)
 
 # Crea las listas para los agentes y los grupos
 lista_agentes = tk.Listbox(frame_agentes, selectmode="single", exportselection=False, listvariable=opciones_agentes, width=25)
@@ -355,6 +369,13 @@ btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
 # Crea el botón de Consultar grupo
 btn_consultar = tk.Button(frame_grupos, text="Consultar", command=consultar_grupos)
 btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+
+# Crea el botón de Funciones extra
+#Etiqueta para extras
+lbl_vulnerabilidades = tk.Label(frame_severidad, text="Oprima para ver las opciones avanzadas:")
+lbl_vulnerabilidades.pack(side=tk.BOTTOM)
+btn_consultar = tk.Button(frame_severidad, text="Ir", command=ir_extras)
+btn_consultar.pack(side=tk.BOTTOM, padx=10, pady=10)
 
 #Loop principal para la visualización
 ventana.mainloop()
