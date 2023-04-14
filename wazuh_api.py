@@ -5,7 +5,7 @@ import urllib3
 from base64 import b64encode
 
 protocol = 'https'
-host = '192.168.68.120'
+host = '192.168.198.131'
 port = 55000
 token = ""
 requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
@@ -41,6 +41,9 @@ lbl_severidad = tk.Label(frame_severidad, text="Severidad:")
 lbl_severidad.pack(side=tk.TOP)
 #Etiqueta para la lista de Vulnerabilidades
 lbl_vulnerabilidades = tk.Label(frame_vulnerabilidades, text="Vulnerabilidades:")
+lbl_vulnerabilidades.pack(side=tk.TOP)
+#Etiqueta para resultados
+lbl_vulnerabilidades = tk.Label(frame_resultados, text="Resultados de consultas:")
 lbl_vulnerabilidades.pack(side=tk.TOP)
 
 # Define las opciones de los agentes ,los grupos y vulnerabilidades
@@ -304,21 +307,122 @@ def conectarse(*args):
         menu_vulnerabilidades['menu'].add_command(label=vulnerabilidad, command=lambda v=vulnerabilidad: vulnerabilidad_seleccionada.set(v))
     print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
 
+
+
 def ir_extras (*args):
-    protocol = 'https'
-    host = '192.168.68.120'
-    port = 55000
-    token = ""
-    requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
-    ventana_extra = tk.Toplevel()
-    ventana_extra.title("Opciones avanzadas")
-    ventana_extra.geometry("1200x400")
-    # Crea el frame principal
-    frame_principal = tk.Frame(ventana_extra)
-    frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-    # Crea los frames para cada elemento
-    frame_agentes = tk.Frame(frame_principal)
-    frame_agentes.pack(side=tk.LEFT, fill=tk.Y, padx=10)
+ def consultar_estado(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    wazuh_status = requests.get(f"{protocol}://{host}:{port}/manager/status?pretty=true", headers=requests_headers, verify=False)
+    data = json.loads(wazuh_status.text)
+    # Acceder a los elementos dentro del objeto
+    affected_items = data['data']['affected_items'][0]
+    # Imprimir los elementos
+    resul_text.insert(tk.END,"Estado del servidor:" + "\n")
+    for item in affected_items:
+        resul_text.insert(tk.END,"........................................................" + "\n")
+        resul_text.insert(tk.END,item + ": " + affected_items[item] + "\n")
+
+ def ver_configuracion(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    st_conf = requests.get(f"{protocol}://{host}:{port}/manager/configuration?pretty=true", headers=requests_headers, verify=False)
+    data = json.loads(st_conf.text)
+    global_data = data['data']['affected_items'][0].get('global', {})
+    alerts_data = data['data']['affected_items'][0].get('alerts', {})
+    vulnerability_detector_data = data['data']['affected_items'][0].get('vulnerability-detector',{})
+    sca_data = data['data']['affected_items'][0].get('sca',{})
+    provider = vulnerability_detector_data['provider']
+    resul_text.insert(tk.END,"\n" + "Configuración global:" + "\n" + "\n")
+    for item in global_data:
+        if isinstance(global_data[item], list):
+            resul_text.insert(tk.END,f"{item}: {', '.join(global_data[item])}\n")
+        else:
+            resul_text.insert(tk.END,f"{item}: {global_data[item]}\n")
+    resul_text.insert(tk.END,"\n" + "Configuración de alertas:" + "\n" + "\n")
+    for item in alerts_data:
+        resul_text.insert(tk.END,item + ": " + alerts_data[item] + "\n")
+    resul_text.insert(tk.END,"\n" + "Configuración de detector de vulnerabilidades:" + "\n" + "\n")
+    for item in vulnerability_detector_data:
+        if item == "provider":
+         resul_text.insert(tk.END, "proveedor:" + "\n")
+         for key, value in provider.items():
+             resul_text.insert(tk.END, f"{key}: {value}\n")   
+        else:    
+            values = str(vulnerability_detector_data[item])
+            resul_text.insert(tk.END, f"{item}: {values}\n")
+    resul_text.insert(tk.END,"\n" + "Configuración sca:" + "\n" + "\n")
+    for item in sca_data:
+        resul_text.insert(tk.END,item + ": " + sca_data[item] + "\n")
+   
+ def ver_logs (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    st_logs = requests.get(f"{protocol}://{host}:{port}/manager/logs?pretty=true", headers=requests_headers, verify=False)
+    data = json.loads(st_logs.text)
+    eventos = data['data']['affected_items']
+    resul_text.delete("1.0", tk.END)
+    for evento in eventos:
+        resul_text.insert(tk.END, f"Timestamp: {evento['timestamp']}\n")
+        resul_text.insert(tk.END, f"Tag: {evento['tag']}\n")
+        resul_text.insert(tk.END, f"Level: {evento['level']}\n")
+        resul_text.insert(tk.END, f"Description: {evento['description']}\n\n")
+
+ def ver_resumen (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    st_logs = requests.get(f"{protocol}://{host}:{port}/manager/logs/summary?pretty=true", headers=requests_headers, verify=False)
+    data = json.loads(st_logs.text) 
+    items = data['data']['affected_items']
+    for item in items:
+        for key in item.keys():
+            values = item[key]
+            resul_text.insert(tk.END, f"{key}\n")
+        for k, v in values.items():
+            resul_text.insert(tk.END, f"\t{k}: {v}\n")
+        resul_text.insert(tk.END, f"\n")
+
+ nueva_ventana = tk.Tk()
+ nueva_ventana.title("Opciones avanzadas")
+ nueva_ventana.geometry("600x600")
+ # Crea el frame principal
+ frame_principal = tk.Frame(nueva_ventana)
+ frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+ # Crea los frames para cada elemento
+ frame_resul = tk.Frame(frame_principal)
+ frame_resul.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
+ frame_botones = tk.Frame(frame_principal)
+ frame_botones.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
+ #Etiqueta para resultados
+ lbl_resul = tk.Label(frame_resul, text="Resultados de consultas:")
+ lbl_resul.pack(side=tk.TOP)
+ #Crea el cuadro de resultados
+ resul_text = tk.Text(frame_resul, height=10)
+ resul_text.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+ # Botón de Estado
+ btn_estado = tk.Button(frame_botones, text="Estado del servidor", command=consultar_estado)
+ btn_estado.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de Configuración
+ btn_config = tk.Button(frame_botones, text="Configuración del servidor", command=ver_configuracion)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de Logs
+ btn_config = tk.Button(frame_botones, text="Consultar Logs", command=ver_logs)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de Logs resumen
+ btn_config = tk.Button(frame_botones, text="Ver resumen de logs", command=ver_resumen)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ nueva_ventana.mainloop()
 
 # Crea las listas para los agentes y los grupos
 lista_agentes = tk.Listbox(frame_agentes, selectmode="single", exportselection=False, listvariable=opciones_agentes, width=25)
@@ -351,31 +455,31 @@ boton = tk.Button(frame_entrada, text="Buscar", command=buscar)
 boton.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Conectar
-btn_consultar = tk.Button(ventana, text="Conectar", command=conectarse)
-btn_consultar.pack(side=tk.LEFT, padx=10, pady=10)
+btn_conectar = tk.Button(ventana, text="Conectar", command=conectarse)
+btn_conectar.pack(side=tk.LEFT, padx=10, pady=10)
 
 # Crea el botón de Consultar por severidad
-btn_consultar = tk.Button(frame_severidad, text="Consultar", command=consultar_severidad)
-btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+btn_consultarseveridad = tk.Button(frame_severidad, text="Consultar", command=consultar_severidad)
+btn_consultarseveridad.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Consultar por CVE
-btn_consultar = tk.Button(frame_vulnerabilidades, text="Consultar", command=consultar_cve)
-btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+btn_consultarcve = tk.Button(frame_vulnerabilidades, text="Consultar", command=consultar_cve)
+btn_consultarcve.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Consultar agente
-btn_consultar = tk.Button(frame_agentes, text="Consultar", command=consultar_agente)
-btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+btn_consultaragente = tk.Button(frame_agentes, text="Consultar", command=consultar_agente)
+btn_consultaragente.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Consultar grupo
-btn_consultar = tk.Button(frame_grupos, text="Consultar", command=consultar_grupos)
-btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+btn_consultarGrupo = tk.Button(frame_grupos, text="Consultar", command=consultar_grupos)
+btn_consultarGrupo.pack(side=tk.TOP, padx=10, pady=10)
 
 # Crea el botón de Funciones extra
 #Etiqueta para extras
 lbl_vulnerabilidades = tk.Label(frame_severidad, text="Oprima para ver las opciones avanzadas:")
 lbl_vulnerabilidades.pack(side=tk.BOTTOM)
-btn_consultar = tk.Button(frame_severidad, text="Ir", command=ir_extras)
-btn_consultar.pack(side=tk.BOTTOM, padx=10, pady=10)
+btn_consultarExtras = tk.Button(frame_severidad, text="Ir", command=ir_extras)
+btn_consultarExtras.pack(side=tk.BOTTOM, padx=10, pady=10)
 
 #Loop principal para la visualización
 ventana.mainloop()

@@ -54,6 +54,5 @@ print("\nGetting agents status summary:")
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
 #1vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/show?search=", headers=requests_headers, verify=False)
 #print(vulnerabilidades.text)
-grupo="default"
-solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
-print(solicitud.text)
+st_logs = requests.get(f"{protocol}://{host}:{port}/manager/logs/summary?pretty=true", headers=requests_headers, verify=False)
+print(st_logs.text)
