@@ -5,6 +5,11 @@ import requests
 import urllib3
 from base64 import b64encode
 
+import tkinter as tk
+
+
+
+
 # Disable insecure https warnings (for self-signed SSL certificates)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -24,7 +29,7 @@ login_headers = {'Content-Type': 'application/json',
 print("\nLogin request ...\n")
 response = requests.post(login_url, headers=login_headers, verify=False)
 token = json.loads(response.content.decode())['data']['token']
-print(token)
+#print(token)
 
 # New authorization header with the JWT token we got
 requests_headers = {'Content-Type': 'application/json',
@@ -34,19 +39,21 @@ print("\n- API calls with TOKEN environment variable ...\n")
 
 print("Getting API information:")
 
-response = requests.get(f"{protocol}://{host}:{port}/?pretty=true", headers=requests_headers, verify=False)
-print(response.text)
+#response = requests.get(f"{protocol}://{host}:{port}/?pretty=true", headers=requests_headers, verify=False)
+#print(response.text)
 
 print("\nGetting agents status summary:")
 
 #response = requests.get(f"{protocol}://{host}:{port}/agents/summary/status?pretty=true", headers=requests_headers, verify=False)
-response = requests.get(f"{protocol}://{host}:{port}/agents?status=active&pretty=true", headers=requests_headers, verify=False)
+#response = requests.get(f"{protocol}://{host}:{port}/agents?status=active&pretty=true", headers=requests_headers, verify=False)
 #print(response.text)
 #print(json.loads(response.content.decode())['data']['affected_items'][1]['name'])
 
 #EJEMPLO DE BUSQUEDA POR VULNERABILIDADES
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&limit=800", headers=requests_headers, verify=False)
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
-vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/show?search=", headers=requests_headers, verify=False)
-print(vulnerabilidades.text)
-print("\nEnd of the script.\n")
+#1vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/show?search=", headers=requests_headers, verify=False)
+#print(vulnerabilidades.text)
+grupo="default"
+solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
+print(solicitud.text)

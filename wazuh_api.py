@@ -90,16 +90,12 @@ def actualizar_vulnerabilidad(*args):
         vulnerabilidad_seleccionada.set(valor)
 
 # Función para obtener la selección actual de ambas listas
-def consultar(*args):
+def consultar_severidad(*args):
     global protocol
     global host 
     global port
     global requests_headers
-    vulnera = []
-    agente = agente_seleccionado.get()
-    grupo = grupo_seleccionado.get()
     severidad = severidad_seleccionado.get()
-    vulnerabilidad = vulnerabilidad_seleccionada.get()
     resultados_text.delete("1.0", tk.END)
     
     if severidad == "Todas":
@@ -174,12 +170,64 @@ def consultar(*args):
     #resultados_text.insert(tk.END, "Grupo seleccionado: " + grupo + "\n")
     #resultados_text.insert(tk.END, "Vulnerabilidad seleccionada: " + vulnerabilidad + "\n")
 
-    print("Agente seleccionado:", agente)
     print("Grupo seleccionado:", grupo)
     print("Severidad seleccionada:", severidad)
-    print("Vulnerabilidad seleccionada:", vulnerabilidad)
+
+def consultar_cve (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    vulnerabilidad = vulnerabilidad_seleccionada.get()
+    resultados_text.delete("1.0", tk.END)
+    common_vul = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=cve={vulnerabilidad}&limit=800&pretty=true", headers=requests_headers, verify=False)
+    #print(common_vul.text)
+    data = json.loads(common_vul.text)
+    # Extrae los elementos que necesitas del diccionario
+    name = data['data']['affected_items'][0]['name']
+    updated = data['data']['affected_items'][0]['updated']
+    version = data['data']['affected_items'][0]['version']
+    status = data['data']['affected_items'][0]['status']
+    severity = data['data']['affected_items'][0]['severity']
+    resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: "+ updated + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
+    print("Severidad seleccionada:", vulnerabilidad)
+
+def consultar_agente (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    agente = agente_seleccionado.get()
+    resultados_text.delete("1.0", tk.END)
+    solicitud = requests.get(f"{protocol}://{host}:{port}/agents?select=name&select=ip&select=status&select=os.name&select=os.version&select=os.platform&search={agente}&pretty=true", headers=requests_headers, verify=False)
+    data =json.loads(solicitud.text)
+    name = data['data']['affected_items'][0].get('os', {}).get('name', 'N/A')
+    platform = data['data']['affected_items'][0].get('os', {}).get('platform', 'N/A')
+    version = data['data']['affected_items'][0].get('os', {}).get('version', 'N/A')
+    ip = data['data']['affected_items'][0]['ip']
+    status = data['data']['affected_items'][0]['status']
+    id = data['data']['affected_items'][0]['id']
+    resultados_text.insert(tk.END,agente + "\n" + "Sistema operativo: " + name + "\n" + "Plataforma: "+ platform + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "IP: "+ ip + "\n" + "ID: "+ id + "\n")
+
+def consultar_grupos(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    grupo = grupo_seleccionado.get()
+    resultados_text.delete("1.0", tk.END)
+    solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
+    data =json.loads(solicitud.text)
+    if data['data']['affected_items']:
+        count = data['data']['affected_items'][0]['count']
+        resultados_text.insert(tk.END,grupo + "\n" + "Número de agentes: " + str(count) + "\n")
+    else:
+        resultados_text.insert(tk.END, "No se encontraron agentes el el grupo.\n")
+
 
 def buscar(*args):
+    #2. BUSQUEDA POR PALABRA CLAVE
+    
     return
 
 #Función para actualizar la selección de la vulnerabilidad
@@ -217,7 +265,6 @@ def conectarse(*args):
     requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
     print("\n- API calls with TOKEN environment variable ...\n")
     opciones = []
-
     #Solicitud y proceso para obtener y mostrar los agentes y grupos
     response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False) # Solicitud de los agentes
     #print(response.text) #Imprime el Json
@@ -225,9 +272,7 @@ def conectarse(*args):
 
     for i in resp:
         nombre = i['name'] # Obtener el nombre del elemento actual
-        id = i['id'] # Obtener el ide del elemento actual
-        aux = nombre + " " + id
-        opciones.append(aux)
+        opciones.append(nombre)
 
     data = json.loads(response.text)
     grupos = []
@@ -259,8 +304,6 @@ def conectarse(*args):
     for vulnerabilidad in opciones_vulnerabilidades:
         menu_vulnerabilidades['menu'].add_command(label=vulnerabilidad, command=lambda v=vulnerabilidad: vulnerabilidad_seleccionada.set(v))
     print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
-    #return grupos 
-    #return vulnerabilidades
 
 
 # Crea las listas para los agentes y los grupos
@@ -297,9 +340,21 @@ boton.pack(side=tk.TOP, padx=10, pady=10)
 btn_consultar = tk.Button(ventana, text="Conectar", command=conectarse)
 btn_consultar.pack(side=tk.LEFT, padx=10, pady=10)
 
-# Crea el botón de Consultar
-btn_consultar = tk.Button(ventana, text="Consultar", command=consultar)
-btn_consultar.pack(side=tk.LEFT, padx=10, pady=10)
+# Crea el botón de Consultar por severidad
+btn_consultar = tk.Button(frame_severidad, text="Consultar", command=consultar_severidad)
+btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+
+# Crea el botón de Consultar por CVE
+btn_consultar = tk.Button(frame_vulnerabilidades, text="Consultar", command=consultar_cve)
+btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+
+# Crea el botón de Consultar agente
+btn_consultar = tk.Button(frame_agentes, text="Consultar", command=consultar_agente)
+btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
+
+# Crea el botón de Consultar grupo
+btn_consultar = tk.Button(frame_grupos, text="Consultar", command=consultar_grupos)
+btn_consultar.pack(side=tk.TOP, padx=10, pady=10)
 
 #Loop principal para la visualización
 ventana.mainloop()
