@@ -30,6 +30,8 @@ frame_resultados = tk.Frame(frame_principal)
 frame_resultados.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
 frame_entrada = tk.Frame(frame_principal)
 frame_entrada.pack(side=tk.BOTTOM, fill=tk.BOTH, padx=10, pady=10, expand=True)
+frame_entries = tk.Frame(frame_agentes)
+frame_entries.pack(side=tk.BOTTOM, pady=10)
 # Etiqueta para la lista de Agentes
 lbl_agentes = tk.Label(frame_agentes, text="Agentes:")
 lbl_agentes.pack(side=tk.TOP)
@@ -45,6 +47,19 @@ lbl_vulnerabilidades.pack(side=tk.TOP)
 #Etiqueta para resultados
 lbl_vulnerabilidades = tk.Label(frame_resultados, text="Resultados de consultas:")
 lbl_vulnerabilidades.pack(side=tk.TOP)
+#Etiqueta para los campos del agente que se desea añadir
+name_label = tk.Label(frame_entries, text="Nombre:")
+name_label.grid(row=0, column=0)
+name_entry = tk.Entry(frame_entries)
+name_entry.grid(row=0, column=1)
+id_label = tk.Label(frame_entries, text="ID:")
+id_label.grid(row=1, column=0)
+id_entry = tk.Entry(frame_entries)
+id_entry.grid(row=1, column=1)
+ip_label = tk.Label(frame_entries, text="Dirección IP:")
+ip_label.grid(row=2, column=0)
+ip_entry = tk.Entry(frame_entries)
+ip_entry.grid(row=2, column=1)
 
 # Define las opciones de los agentes ,los grupos y vulnerabilidades
 opciones_agentes = tk.StringVar(value=[])
@@ -57,7 +72,6 @@ opciones_severidad = ["Todas", "Críticas", "Altas", "Medias", "Bajas", "None"]
 # Variables para almacenar las selecciones de las listas
 agente_seleccionado = tk.StringVar()
 grupo_seleccionado = tk.StringVar()
-palabra_clave = tk.StringVar()
 severidad_seleccionado = tk.StringVar(value="Seleccione un nivel de severidad")
 vulnerabilidad_seleccionada = tk.StringVar(value="Seleccione una vulnerabilidad")
 
@@ -183,20 +197,7 @@ def consultar_cve (*args):
     global requests_headers
     vulnerabilidad = vulnerabilidad_seleccionada.get()
     resultados_text.delete("1.0", tk.END)
-    common_vul = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=cve={vulnerabilidad}&limit=800&pretty=true", headers=requests_headers, verify=False)
-    #print(common_vul.text)
-    data = json.loads(common_vul.text)
-    # Extrae los elementos que necesitas del diccionario
-    name = data['data']['affected_items'][0]['name']
-    updated = data['data']['affected_items'][0]['updated']
-    version = data['data']['affected_items'][0]['version']
-    status = data['data']['affected_items'][0]['status']
-    severity = data['data']['affected_items'][0]['severity']
-    resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: "+ updated + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
-    print("Severidad seleccionada:", vulnerabilidad)
-    resultados_text.insert(tk.END, f"\n-------------------\n\n") 
 
-    resultados_text.insert(tk.END,"Agentes con la vulnerabilidad "+ vulnerabilidad +" : " + "\n")
     ids = []
     response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
@@ -204,6 +205,26 @@ def consultar_cve (*args):
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
+    for agente in ids:
+        common_vul = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=cve={vulnerabilidad}&limit=800&pretty=true", headers=requests_headers, verify=False)
+        #print(common_vul.text)
+        data = json.loads(common_vul.text)
+        affected_items = data.get("data", {}).get("affected_items", [])
+        if affected_items:
+            # Extrae los elementos que necesitas del diccionario
+            for item in affected_items:
+                item = affected_items[0]
+                name = item.get('name')
+                updated = item.get('updated')
+                version = item.get('version')
+                status = item.get('status')
+                severity = item.get('severity')
+                resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: "+ updated + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
+                print("Severidad seleccionada:", vulnerabilidad)
+                resultados_text.insert(tk.END, f"\n-------------------\n\n") 
+
+    resultados_text.insert(tk.END,"Agentes con la vulnerabilidad "+ vulnerabilidad +" : " + "\n")
+    
     for agent in ids:
         vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={vulnerabilidad}", headers=requests_headers, verify=False)
         data = json.loads(vul_search.text)
@@ -219,31 +240,36 @@ def consultar_agente (*args):
     global port
     global requests_headers
     agente = agente_seleccionado.get()
-    resultados_text.delete("1.0", tk.END)
-    solicitud = requests.get(f"{protocol}://{host}:{port}/agents?select=name&select=ip&select=status&select=os.name&select=os.version&select=os.platform&search={agente}&pretty=true", headers=requests_headers, verify=False)
-    data =json.loads(solicitud.text)
-    name = data['data']['affected_items'][0].get('os', {}).get('name', 'N/A')
-    platform = data['data']['affected_items'][0].get('os', {}).get('platform', 'N/A')
-    version = data['data']['affected_items'][0].get('os', {}).get('version', 'N/A')
-    ip = data['data']['affected_items'][0]['ip']
-    status = data['data']['affected_items'][0]['status']
-    id = data['data']['affected_items'][0]['id']
-    resultados_text.insert(tk.END,agente + "\n" + "Sistema operativo: " + name + "\n" + "Plataforma: "+ platform + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "IP: "+ ip + "\n" + "ID: "+ id + "\n")
-
+    if agente:
+        resultados_text.delete("1.0", tk.END)
+        solicitud = requests.get(f"{protocol}://{host}:{port}/agents?select=name&select=ip&select=status&select=os.name&select=os.version&select=os.platform&search={agente}&pretty=true", headers=requests_headers, verify=False)
+        data =json.loads(solicitud.text)
+        name = data['data']['affected_items'][0].get('os', {}).get('name', 'N/A')
+        platform = data['data']['affected_items'][0].get('os', {}).get('platform', 'N/A')
+        version = data['data']['affected_items'][0].get('os', {}).get('version', 'N/A')
+        ip = data['data']['affected_items'][0]['ip']
+        status = data['data']['affected_items'][0]['status']
+        id = data['data']['affected_items'][0]['id']
+        resultados_text.insert(tk.END,agente + "\n" + "Sistema operativo: " + name + "\n" + "Plataforma: "+ platform + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "IP: "+ ip + "\n" + "ID: "+ id + "\n")
+    else: 
+        resultados_text.insert(tk.END, "No hay agente seleccionado.\n")
 def consultar_grupos(*args):
     global protocol
     global host 
     global port
     global requests_headers
     grupo = grupo_seleccionado.get()
-    resultados_text.delete("1.0", tk.END)
-    solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
-    data =json.loads(solicitud.text)
-    if data['data']['affected_items']:
-        count = data['data']['affected_items'][0]['count']
-        resultados_text.insert(tk.END,grupo + "\n" + "Número de agentes: " + str(count) + "\n")
-    else:
-        resultados_text.insert(tk.END, "No se encontraron agentes el el grupo.\n")
+    if grupo:
+        resultados_text.delete("1.0", tk.END)
+        solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
+        data =json.loads(solicitud.text)
+        if data['data']['affected_items']:
+            count = data['data']['affected_items'][0]['count']
+            resultados_text.insert(tk.END,grupo + "\n" + "Número de agentes: " + str(count) + "\n")
+        else:
+            resultados_text.insert(tk.END, "No se encontraron agentes el el grupo.\n")
+    else: 
+        resultados_text.insert(tk.END, "No hay grupo seleccionado.\n")
 
 
 def buscar(*args):
@@ -251,32 +277,34 @@ def buscar(*args):
     global host 
     global port
     global requests_headers
-    palabra_clave = entrada.get()
     resultados_text.delete("1.0", tk.END)
-    resultados_text.insert(tk.END,"Búsqueda de vulnerabilidades para: " + palabra_clave + "\n") 
-    ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
-    resp = json.loads(response.content.decode())['data']['affected_items'] 
-    for i in resp:
-        nombre = i['id'] # Obtener el nombre del elemento actual
-        ids.append(nombre)
+    palabra_clave = entrada.get()
+    if palabra_clave:
+        resultados_text.delete("1.0", tk.END)
+        resultados_text.insert(tk.END,"Búsqueda de vulnerabilidades para: " + palabra_clave + "\n") 
+        ids = []
+        response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+        resp = json.loads(response.content.decode())['data']['affected_items'] 
+        for i in resp:
+            id = i['id'] # Obtener el nombre del elemento actual
+            ids.append(id)
 
-    for agent in ids:
-        vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={palabra_clave}", headers=requests_headers, verify=False)
-        data = json.loads(vul_search.text)
-        affected_items = data.get("data", {}).get("affected_items", [])
-        if affected_items:
-            resultados_text.insert(tk.END,"Coincidencias para agente: " + agent + "\n")
-            for item in affected_items:
-               item = affected_items[0]
-               name = item.get("name")
-               updated = item.get("updated")
-               version = item.get("version")
-               status = item.get("status")
-               severity = item.get("severity")
-               resultados_text.insert(tk.END,f"\n\nNombre: {name}\nUpdated: {updated}\nVersión: {version}\nEstado: {status}\nSeveridad: {severity}\n")
-        else: 
-            resultados_text.insert(tk.END, f"\nNo hay coicidencias con el agente {agent}\n\n")    
+        for agent in ids:
+            busqueda_clave = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={palabra_clave}&pretty=true", headers=requests_headers, verify=False)
+            data = json.loads(busqueda_clave.text)
+            affected_items = data.get("data", {}).get("affected_items", [])
+            if affected_items:
+                resultados_text.insert(tk.END,"Coincidencias para agente: " + agent + "\n")
+                for item in affected_items:
+                    item = affected_items[0]
+                    name = item.get("name")
+                    updated = item.get("updated")
+                    version = item.get("version")
+                    status = item.get("status")
+                    severity = item.get("severity")
+                    resultados_text.insert(tk.END,f"\n\nNombre: {name}\nUpdated: {updated}\nVersión: {version}\nEstado: {status}\nSeveridad: {severity}\n")
+            else: 
+                resultados_text.insert(tk.END, f"\nNo hay coicidencias con el agente {agent}\n\n")    
     
 
 #Función para actualizar la selección de la vulnerabilidad
@@ -291,7 +319,6 @@ def actualizar_vulnerabilidad(*args):
 def conectarse(*args):
     # Disable insecure https warnings (for self-signed SSL certificates)
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
     # Configuration
     global token
     global requests_headers 
@@ -313,39 +340,49 @@ def conectarse(*args):
     # New authorization header with the JWT token we got
     requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
     print("\n- API calls with TOKEN environment variable ...\n")
+    ids=[]
     opciones = []
     #Solicitud y proceso para obtener y mostrar los agentes y grupos
     response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False) # Solicitud de los agentes
     #print(response.text) #Imprime el Json
     resp = json.loads(response.content.decode())['data']['affected_items'] #Así se convierte y maneja como un objeto por bloques 
-
     for i in resp:
         nombre = i['name'] # Obtener el nombre del elemento actual
+        id = i['id'] # Obtener el nombre del elemento actual
+        ids.append(id)
         opciones.append(nombre)
 
-    data = json.loads(response.text)
-    grupos = []
-    for item in data['data']['affected_items']: #Así se convierte y maneja como un objeto por bloques 
-        if 'group' in item: # Verifica si el grupo ya está en la lista 
-            grupos += item['group'] 
+    grupos_opc = []
+    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true", headers=requests_headers, verify=False)
+    data =json.loads(respuesta.text)
+    grupos = data['data']['affected_items']
+    for group in grupos:
+        grp = group['name'] 
+        grupos_opc.append(grp)
 
     opciones_agentes.set(opciones) # Asignar la cadena al objeto opciones_agentes para actualizar la vista
-    grupos_str = ", ".join(list(set(grupos))) # Convertir la lista de grupos en una cadena separada por comas
-    opciones_grupos.set(grupos_str) # Asignar la cadena al objeto opciones_grupos para actualizar la vista
+    #grupos_str = ", ".join(list(set(grupos_opc))) # Convertir la lista de grupos en una cadena separada por comas
+    opciones_grupos.set(grupos_opc) # Asignar la cadena al objeto opciones_grupos para actualizar la vista
     print(opciones_agentes.get()) # Imprimir la lista completa de nombres
-    print(list(set(grupos)))
-
-    # Solicitud para las severidades existentes
-    response2 = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
-    data2 = json.loads(response2.text)
+    print(list(set(grupos_opc)))
     vulnerabilidades = []
-    for vul in data2['data']['affected_items']:
-        if 'cve' in vul:
-            cves = vul['cve']
-        if isinstance(cves, list):
-            vulnerabilidades += cves
-        else:
-            vulnerabilidades.append(cves)
+    cves = []
+    # Solicitud para las severidades existentes
+    for agent in ids:
+        response2 = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+        data2 = json.loads(response2.text)
+        affected_items = data2.get("data", {}).get("affected_items", [])
+        if affected_items:
+            for item in affected_items:
+                if 'cve' in item:
+                 cves = item.get('cve')
+                 if isinstance(cves, list):
+                    for cve in cves:
+                        if cve not in vulnerabilidades:
+                            vulnerabilidades.append(cve)
+                 else:
+                    if cves not in vulnerabilidades:
+                        vulnerabilidades.append(cves)
     opciones_vulnerabilidades = vulnerabilidades
     opciones_vulnerabilidades_str.set(" ".join(opciones_vulnerabilidades)) # actualizar el valor de la variable StringVar con la nueva lista de opciones
     
@@ -354,7 +391,50 @@ def conectarse(*args):
         menu_vulnerabilidades['menu'].add_command(label=vulnerabilidad, command=lambda v=vulnerabilidad: vulnerabilidad_seleccionada.set(v))
     print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
 
+def mostrar_top_vul (*args):
+    vuln_counts = {}
+    global opciones_vulnerabilidades_str
+    opciones_vulnerabilidades = opciones_vulnerabilidades_str.get().split()
+    for vuln in opciones_vulnerabilidades:
+        if vuln in vuln_counts:
+            vuln_counts[vuln] += 1
+        else:
+            vuln_counts[vuln] = 1
+# Ordenar las vulnerabilidades por el número de ocurrencias y mostrar las 10 más comunes
+    top_vulns = sorted(vuln_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    print("Top 10 vulnerabilidades:")
+    resultados_text.insert(tk.END,"Top 10 vulnerabilidades:\n")
+    for i, (vuln, count) in enumerate(top_vulns):
+        print(f"{i+1}. {vuln}: {count} ocurrencias")
+        resultados_text.insert(tk.END,f"{i+1}. {vuln}: {count} ocurrencias" + "\n")
 
+def mostrar_top_ag (*args):
+    # Crear un diccionario para contar el número de vulnerabilidades por agente
+    agent_vuln_counts = {}
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        id = i['id'] # Obtener el nombre del elemento actual
+        ids.append(id)
+    # Iterar sobre la lista de vulnerabilidades y contar el número de ocurrencias por agente
+    global opciones_vulnerabilidades_str
+    opciones_vulnerabilidades = opciones_vulnerabilidades_str.get().split()
+    for vuln in opciones_vulnerabilidades:
+        affected_agents = set()
+        for agent in ids:
+            response = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=cve={vuln}&pretty=true", headers=requests_headers, verify=False)
+            data = json.loads(response.text)
+            affected_items = data.get("data", {}).get("affected_items", [])
+            if affected_items:
+                affected_agents.add(agent)
+        for agent in affected_agents:
+            agent_vuln_counts[agent] = agent_vuln_counts.get(agent, 0) + 1
+    # Ordenar los agentes por el número de vulnerabilidades y mostrar los 10 más comunes
+    top_agents = sorted(agent_vuln_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    print("Top 10 agentes con más vulnerabilidades:")
+    for i, (agent, count) in enumerate(top_agents):
+        print(f"{i+1}. {agent}: {count} vulnerabilidades")
 
 def ir_extras (*args):
  def consultar_estado(*args):
@@ -768,49 +848,49 @@ def ir_extras (*args):
  btn_config = tk.Button(frame_botones, text="Configuración del servidor", command=ver_configuracion)
  btn_config.pack(side=tk.LEFT, padx=10, pady=10)
  # Botón de Logs
- btn_config = tk.Button(frame_botones, text="Consultar Logs", command=ver_logs)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_logs = tk.Button(frame_botones, text="Consultar Logs", command=ver_logs)
+ btn_logs.pack(side=tk.LEFT, padx=10, pady=10)
  # Botón de Logs resumen
- btn_config = tk.Button(frame_botones, text="Ver resumen de logs", command=ver_resumen)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_resum = tk.Button(frame_botones, text="Ver resumen de logs", command=ver_resumen)
+ btn_resum.pack(side=tk.LEFT, padx=10, pady=10)
  # Botón de traer grupos
- btn_config = tk.Button(frame_botones2, text="Traer Grupos", command=traer_grupos)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_traergrup = tk.Button(frame_botones2, text="Traer Grupos", command=traer_grupos)
+ btn_traergrup.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de estado de tareas
- btn_config = tk.Button(frame_botones2, text="Traer tareas", command=traer_tareas)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_tareas = tk.Button(frame_botones2, text="Traer tareas", command=traer_tareas)
+ btn_tareas.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de Info de hardware
- btn_config = tk.Button(frame_botones2, text="Información de hardware", command=info_hard)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_hw = tk.Button(frame_botones2, text="Información de hardware", command=info_hard)
+ btn_hw.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de Info de hotfixes
- btn_config = tk.Button(frame_botones2, text="Traer hotfixes", command=traer_hotfix)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_hotf = tk.Button(frame_botones2, text="Traer hotfixes", command=traer_hotfix)
+ btn_hotf.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de Info de ip
- btn_config = tk.Button(frame_botones2, text="Consultar IP", command=traer_ip)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_ip = tk.Button(frame_botones2, text="Consultar IP", command=traer_ip)
+ btn_ip.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de interfaz
- btn_config = tk.Button(frame_botones3, text="Ver Interfaces", command=traer_interfaz)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_inter = tk.Button(frame_botones3, text="Ver Interfaces", command=traer_interfaz)
+ btn_inter.pack(side=tk.LEFT, padx=10, pady=10)
 # Botón de routeo
- btn_config = tk.Button(frame_botones3, text="Ver routing", command=traer_ruteo)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_rut = tk.Button(frame_botones3, text="Ver routing", command=traer_ruteo)
+ btn_rut.pack(side=tk.LEFT, padx=10, pady=10)
  # Botón de sistema operativo
- btn_config = tk.Button(frame_botones3, text="Ver SO", command=traer_so)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_so = tk.Button(frame_botones3, text="Ver SO", command=traer_so)
+ btn_so.pack(side=tk.LEFT, padx=10, pady=10)
  # Botón de paquetes
- btn_config = tk.Button(frame_botones3, text="Ver paquetes", command=traer_pack)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_pack = tk.Button(frame_botones3, text="Ver paquetes", command=traer_pack)
+ btn_pack.pack(side=tk.LEFT, padx=10, pady=10)
   # Botón de puertos
- btn_config = tk.Button(frame_botones3, text="Ver puertos", command=traer_puertos)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_port = tk.Button(frame_botones3, text="Ver puertos", command=traer_puertos)
+ btn_port.pack(side=tk.LEFT, padx=10, pady=10)
   # Botón de procesos
- btn_config = tk.Button(frame_botones3, text="Ver procesos", command=traer_procesos)
- btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ btn_pross = tk.Button(frame_botones3, text="Ver procesos", command=traer_procesos)
+ btn_pross.pack(side=tk.LEFT, padx=10, pady=10)
 
  nueva_ventana.mainloop()
 
 # Crea las listas para los agentes y los grupos
-lista_agentes = tk.Listbox(frame_agentes, selectmode="single", exportselection=False, listvariable=opciones_agentes, width=25)
+lista_agentes = tk.Listbox(frame_agentes, selectmode="multiple", exportselection=False, listvariable=opciones_agentes, width=25)
 lista_agentes.pack(side=tk.TOP)
 lista_agentes.bind("<<ListboxSelect>>", actualizar_agente)
 lista_grupos = tk.Listbox(frame_grupos, selectmode="single", exportselection=False, listvariable=opciones_grupos, width=20)
@@ -859,12 +939,203 @@ btn_consultaragente.pack(side=tk.TOP, padx=10, pady=10)
 btn_consultarGrupo = tk.Button(frame_grupos, text="Consultar", command=consultar_grupos)
 btn_consultarGrupo.pack(side=tk.TOP, padx=10, pady=10)
 
+# Crea el botón de Tops
+#Etiqueta para Tops
+lbl_vulnerabilidades = tk.Label(frame_vulnerabilidades, text="Selecciones para ver")
+lbl_vulnerabilidades.pack(side=tk.BOTTOM)
+btn_consultartop10vul = tk.Button(frame_vulnerabilidades, text="Top 10 vulnerabilidades", command=mostrar_top_vul)
+btn_consultartop10vul.pack(side=tk.BOTTOM, padx=10, pady=10)
+btn_consultartop10ag = tk.Button(frame_vulnerabilidades, text="Top 10 Agentes", command=mostrar_top_ag)
+btn_consultartop10ag.pack(side=tk.BOTTOM, padx=10, pady=10)
+
 # Crea el botón de Funciones extra
 #Etiqueta para extras
-lbl_vulnerabilidades = tk.Label(frame_severidad, text="Oprima para ver las opciones avanzadas:")
+lbl_vulnerabilidades = tk.Label(frame_severidad, text="Oprima para ver las opciones avanzadas")
 lbl_vulnerabilidades.pack(side=tk.BOTTOM)
-btn_consultarExtras = tk.Button(frame_severidad, text="Ir", command=ir_extras)
+btn_consultarExtras = tk.Button(frame_severidad, text="Opciones Avanzadas", command=ir_extras)
 btn_consultarExtras.pack(side=tk.BOTTOM, padx=10, pady=10)
+
+def actualizar(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    #Define the name of the agent you want to upgrade
+    agente = agente_seleccionado.get()
+    resultados_text.delete("1.0", tk.END)
+    print(agente)
+    if agente:
+        # Define your Wazuh API endpoint and authentication headers
+        endpoint = f'{protocol}://{host}:{port}'
+        # Search for the agent ID based on the agent name
+        url_searchID = f'{endpoint}/agents?select=id&search={agente}'
+        response = requests.get(url_searchID, headers=requests_headers, verify=False)
+        print("Contenido de la respuesta :", response.content)
+        resultados_text.delete("1.0", tk.END)
+
+        if response.status_code == 200:
+            # Parse the response JSON to extract the agent ID
+            agent_id = json.loads(response.content.decode())['data']['affected_items'][0]['id']
+            print(f'Found agent ID {agent_id} for agent {agente}')
+            # Use the agent ID to upgrade the agent
+            url = f'{endpoint}/agents/upgrade?agents_list={agent_id}&pretty=true'
+            response = requests.put(url, headers=requests_headers, verify=False)
+            print(response.content.decode())
+            if response.status_code == 200:
+                print(f'Successfully upgraded agent {agente}')
+                resultados_text.insert(tk.END,"Agente actualizado con éxito\n")
+            else:
+                print(f'Error upgrading agent {agente}: {response.text}')
+                resultados_text.insert(tk.END,"Hubo un error al intentar actualizar el agente\n")
+        else:
+            print(f'Error searching for agent {agente}: {response.text}')
+            resultados_text.insert(tk.END,"Hubo un error al intentar actualizar el agente\n")
+    else: 
+        resultados_text.insert(tk.END,"Favor de seleccionar un agente\n")
+
+
+def borrar(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    global opciones_agentes
+    #Define the name of the agent you want to delete
+    agente = agente_seleccionado.get()
+    resultados_text.delete("1.0", tk.END)
+    print(agente)
+    if agente:
+        # Define your Wazuh API endpoint and authentication headers
+        endpoint = f'{protocol}://{host}:{port}'
+        # Search for the agent ID based on the agent name
+        url_searchID = f'{endpoint}/agents?select=id&search={agente}'
+        response = requests.get(url_searchID, headers=requests_headers, verify=False)
+        print("Contenido de la respuesta :", response.content)
+        resultados_text.delete("1.0", tk.END)
+
+        if response.status_code == 200:
+            # Parse the response JSON to extract the agent ID
+            agent_id = json.loads(response.content.decode())['data']['affected_items'][0]['id']
+            print(f'Found agent ID {agent_id} for agent {agente}')
+            # Use the agent ID to delete the agent
+            url = f'{endpoint}/agents?pretty=true&older_than=0s&agents_list={agent_id}&status=all'
+            response = requests.delete(url, headers=requests_headers, verify=False)
+            print(response.content.decode())
+
+            if response.status_code == 200:
+                print(f'Successfully deleted agent {agente}')
+                resultados_text.insert(tk.END,"Agente eliminado con éxito\n")
+
+            else:
+                print(f'Error deleting agent {agente}: {response.text}')
+                resultados_text.insert(tk.END,"Hubo un error al intentar eliminar el agente\n")
+        else:
+            print(f'Error deleting {agente}: {response.text}')
+            resultados_text.insert(tk.END,"Hubo un error al intentar eliminar el agente\n")
+
+        url_agentesActualizados = f'{endpoint}/agents?pretty=true&sort=-ip,name'
+        newOpciones =[]
+        lactulizadaAgentes = requests.get(url_agentesActualizados, headers=requests_headers, verify=False)
+        resp = json.loads(lactulizadaAgentes.content.decode())['data']['affected_items'] #Así se convierte y maneja como un objeto por bloques 
+        for i in resp:
+            nombre = i['name'] # Obtener el nombre del elemento actual
+            newOpciones.append(nombre)
+            opciones_agentes.set(newOpciones) # Asignar la cadena al objeto opciones_agentes para actualizar la vista
+    else: 
+        resultados_text.insert(tk.END,"Favor de seleccionar un agente\n")
+
+
+def reiniciar(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    global opciones_agentes
+    #Define the name of the agent you want to restart
+    agente = agente_seleccionado.get()
+    resultados_text.delete("1.0", tk.END)
+    print(agente)
+    if agente: 
+        # Define your Wazuh API endpoint and authentication headers
+        endpoint = f'{protocol}://{host}:{port}'
+        # Search for the agent ID based on the agent name
+        url_searchID = f'{endpoint}/agents?select=id&search={agente}'
+        response = requests.get(url_searchID, headers=requests_headers, verify=False)
+        print("Contenido de la respuesta :", response.content)
+        resultados_text.delete("1.0", tk.END)
+
+        if response.status_code == 200:
+            # Parse the response JSON to extract the agent ID
+            agent_id = json.loads(response.content.decode())['data']['affected_items'][0]['id']
+            print(f'Found agent ID {agent_id} for agent {agente}')
+
+            # Use the agent ID to delete the agent
+            url = f'{endpoint}/agents/restart?pretty=true&agents_list={agent_id}'
+            response = requests.put(url, headers=requests_headers, verify=False)
+            print(response.content.decode())
+
+            if response.status_code == 200:
+                print(f'Successfully restarted agent {agente}')
+                resultados_text.insert(tk.END,"Agente reiniciado con éxito.\n")
+
+            else:
+                print(f'Error restarting agent {agente}: {response.text}')
+                resultados_text.insert(tk.END,"Hubo un error al intentar reiniciar el agente\n")
+        else:
+            print(f'Error restartin agent {agente}: {response.text}')
+            resultados_text.insert(tk.END,"Hubo un error al intentar reiniciar el agente\n")
+    else: 
+        resultados_text.insert(tk.END,"Favor de seleccionar un agente\n")
+
+def añadir(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    global opciones_agentes
+    name = name_entry.get()
+    agent_id = id_entry.get()
+    ip_address = ip_entry.get()
+    resultados_text.delete("1.0", tk.END)
+    if name and agent_id and ip_address:
+        data = {
+            "name": name,
+            "id": agent_id,
+            "ip": ip_address,
+        }
+        print(type(data))
+        # Define your Wazuh API endpoint and authentication headers
+        endpoint = f'{protocol}://{host}:{port}'
+        url = f'{endpoint}/agents/insert'
+        response = requests.post(url,json=data, headers=requests_headers, verify=False)
+        print(response)
+        print(response.content.decode())
+        resultados_text.delete("1.0", tk.END)
+
+        if response.status_code == 200:
+            print(f'Agent{name} added succesfully')
+            resultados_text.insert(tk.END,"Agente añadido con éxito\n")
+        else:
+            print(f'Error added agent {name}: {response.text}')
+            resultados_text.insert(tk.END,"Hubo un error al intentar añadir el agente\n")
+    else: 
+        resultados_text.insert(tk.END,"Favor de ingresar los datos\n")
+
+# Crea el botón de actualizar
+btn_actualizar = tk.Button(ventana, text="Actualizar agentes seleccionados", command=actualizar)
+btn_actualizar.pack(side=tk.LEFT, padx=10, pady=10)
+
+#Crea el botón de borrar
+btn_reiniciar = tk.Button(ventana, text="Reiniciar agentes seleccionados", command=reiniciar)
+btn_reiniciar.pack(side=tk.LEFT, padx=10, pady=10)
+
+#Crea el botón de reiniciar
+btn_actualizar = tk.Button(ventana, text="Borrar agentes seleccionados", command=borrar)
+btn_actualizar.pack(side=tk.LEFT, padx=10, pady=10)
+
+#Crea el botón de añadir
+btn_actualizar = tk.Button(ventana, text="Añadir agente", command=añadir)
+btn_actualizar.pack(side=tk.LEFT, padx=10, pady=10)
 
 #Loop principal para la visualización
 ventana.mainloop()
