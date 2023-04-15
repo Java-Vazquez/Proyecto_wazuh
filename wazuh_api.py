@@ -57,6 +57,7 @@ opciones_severidad = ["Todas", "Críticas", "Altas", "Medias", "Bajas", "None"]
 # Variables para almacenar las selecciones de las listas
 agente_seleccionado = tk.StringVar()
 grupo_seleccionado = tk.StringVar()
+palabra_clave = tk.StringVar()
 severidad_seleccionado = tk.StringVar(value="Seleccione un nivel de severidad")
 vulnerabilidad_seleccionada = tk.StringVar(value="Seleccione una vulnerabilidad")
 
@@ -193,6 +194,24 @@ def consultar_cve (*args):
     severity = data['data']['affected_items'][0]['severity']
     resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: "+ updated + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
     print("Severidad seleccionada:", vulnerabilidad)
+    resultados_text.insert(tk.END, f"\n-------------------\n\n") 
+
+    resultados_text.insert(tk.END,"Agentes con la vulnerabilidad "+ vulnerabilidad +" : " + "\n")
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={vulnerabilidad}", headers=requests_headers, verify=False)
+        data = json.loads(vul_search.text)
+        affected_items = data.get("data", {}).get("affected_items", [])
+        if affected_items:
+            resultados_text.insert(tk.END,"Agente: " + agent + "\n")
+        else: 
+            resultados_text.insert(tk.END, f"\nNo hay coicidencias con {agent}\n\n")   
 
 def consultar_agente (*args):
     global protocol
@@ -228,9 +247,37 @@ def consultar_grupos(*args):
 
 
 def buscar(*args):
-    #2. BUSQUEDA POR PALABRA CLAVE
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    palabra_clave = entrada.get()
+    resultados_text.delete("1.0", tk.END)
+    resultados_text.insert(tk.END,"Búsqueda de vulnerabilidades para: " + palabra_clave + "\n") 
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={palabra_clave}", headers=requests_headers, verify=False)
+        data = json.loads(vul_search.text)
+        affected_items = data.get("data", {}).get("affected_items", [])
+        if affected_items:
+            resultados_text.insert(tk.END,"Coincidencias para agente: " + agent + "\n")
+            for item in affected_items:
+               item = affected_items[0]
+               name = item.get("name")
+               updated = item.get("updated")
+               version = item.get("version")
+               status = item.get("status")
+               severity = item.get("severity")
+               resultados_text.insert(tk.END,f"\n\nNombre: {name}\nUpdated: {updated}\nVersión: {version}\nEstado: {status}\nSeveridad: {severity}\n")
+        else: 
+            resultados_text.insert(tk.END, f"\nNo hay coicidencias con el agente {agent}\n\n")    
     
-    return
 
 #Función para actualizar la selección de la vulnerabilidad
 def actualizar_vulnerabilidad(*args):
@@ -323,7 +370,7 @@ def ir_extras (*args):
     # Imprimir los elementos
     resul_text.insert(tk.END,"Estado del servidor:" + "\n")
     for item in affected_items:
-        resul_text.insert(tk.END,"........................................................" + "\n")
+        resul_text.insert(tk.END,"-------" + "\n")
         resul_text.insert(tk.END,item + ": " + affected_items[item] + "\n")
 
  def ver_configuracion(*args):
@@ -393,6 +440,306 @@ def ir_extras (*args):
             resul_text.insert(tk.END, f"\t{k}: {v}\n")
         resul_text.insert(tk.END, f"\n")
 
+ def traer_grupos (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true", headers=requests_headers, verify=False)
+    data =json.loads(respuesta.text)
+    grupos = data['data']['affected_items']
+    i = 1
+    for group in grupos:
+        bandera = str(i)
+        resul_text.insert(tk.END,bandera + ": " + f"{group['name']}\n")
+        i = i +1;
+
+ def traer_tareas(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    respuesta = requests.get(f"{protocol}://{host}:{port}/tasks/status?pretty=true", headers=requests_headers, verify=False)
+    data =json.loads(respuesta.text)
+    if data['message'] == "No status was returned":
+        resul_text.insert(tk.END,"No se encontraron tareas activas" + "\n")
+    else: 
+        info = data['data']['affected_items']
+        for item in info:
+            resul_text.insert(tk.END,item + ": " + info[item] + "\n")
+
+ def info_hard (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        respuesta = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/hardware?pretty=true", headers=requests_headers, verify=False)
+        data =json.loads(respuesta.text)
+        if "data" in data:
+            cpu = data['data']['affected_items'][0].get('cpu', 'N/A')
+            ram = data['data']['affected_items'][0].get('ram', 'N/A')
+            scan = data['data']['affected_items'][0].get('scan', 'N/A')
+            resul_text.insert(tk.END, f"\n\nAgente: {agent}\n")
+            resul_text.insert(tk.END,"\n" + "CPU:" + "\n")
+            for item in cpu:
+                resul_text.insert(tk.END,item + ": " + str(cpu[item]) + "\n")
+            resul_text.insert(tk.END,"\n" + "RAM:" + "\n")
+            for item in ram:
+                resul_text.insert(tk.END,item + ": " + str(ram[item]) + "\n")
+            resul_text.insert(tk.END,"\n" + "Escaneo:" + "\n")
+            for item in scan:
+                resul_text.insert(tk.END,item + ": " + str(scan[item]) + "\n")
+        else: 
+            resul_text.insert(tk.END, f"\n\nNo hay información para el agente {agent}\n\n")
+
+
+ def traer_hotfix (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:    
+        inv_hotfixes = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/hotfixes?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_hotfixes.text)
+        if "data" in data:
+            affected_items = data['data']['affected_items']
+            for item in affected_items:
+                hotfix = item['hotfix']
+                scan_time = item['scan_time']
+                agent_id = item['agent_id']
+                resul_text.insert(tk.END, f'Hotfix: {hotfix}\nTiempo de escaneo: {scan_time}\nID agente: {agent_id}\n\n')
+        else: 
+            resul_text.insert(tk.END, f"No hay Hotfixes para el agente {agent}\n\n")
+
+ def traer_ip (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+    
+    for agent in ids:
+        inv_netaddr = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netaddr?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_netaddr.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            for item in data:
+                proto = item["proto"]
+                address = item["address"]
+                iface = item["iface"]
+                agent_id = item["agent_id"]
+                resul_text.insert(tk.END, f"Protocolo: {proto}\nDirección: {address}\nIface: {iface}\nID agente: {agent_id}\n\n")
+        else: 
+            resul_text.insert(tk.END, f"No hay configuraciones para el agente {agent}\n\n")
+
+ def traer_interfaz(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        inv_netiface = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netiface?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_netiface.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            for item in data:
+                mtu = item.get('mtu', 'No disponible')
+                type = item.get('type', 'No disponible')
+                adapter = item.get('adapter', 'No disponible')
+                name = item.get('name', 'No disponible')
+                mac = item.get('mac', 'No disponible')
+                state = item.get('state', 'No disponible')
+                agent_id = item.get('agent_id', 'No disponible')
+                resul_text.insert(tk.END, f"MTU: {mtu}\nTipo: {type}\nAdaptador: {adapter}\nNombre: {name}\nmac: {mac}\nEstado: {state}\nID agente: {agent_id}\n\n")
+        else: 
+            resul_text.insert(tk.END, f"No hay configuraciones para el agente {agent}\n\n")
+            
+ def traer_ruteo(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        inv_netproto = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netproto?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_netproto.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            resul_text.insert(tk.END, f"Agente: {agent}\n\n")
+            for item in data:
+                dhcp = item['dhcp']
+                iface = item['iface']
+                type = item['type']
+                gate = item['gateway']
+                agent_id = item['agent_id']
+                resul_text.insert(tk.END, f"DHCP: {dhcp}\nIface: {iface}\nTipo: {type}\nGateway: {gate}\nID agente: {agent_id}\n\n")
+        else: 
+            resul_text.insert(tk.END, f"No hay configuración para el agente {agent}\n\n")
+            
+
+ def traer_so(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        inv_os = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/os?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_os.text)
+        if inv_os.status_code == 200:
+            if "data" in data:
+                os_data = inv_os.json()["data"]['affected_items']
+                # Iterar sobre cada sistema operativo e imprimir la información
+                resul_text.insert(tk.END, f"Agente: {agent}\n\n")
+                for os in os_data:
+                    name = os['hostname']
+                    agent_id = os['agent_id']
+                    resul_text.insert(tk.END, f"Equipo: {name}\nID agente: {agent_id}\n")
+                    os_info = os.get('os', 'N/A')
+                    if os_info:
+                        os = os_info['name']
+                        version = os_info['version']
+                        resul_text.insert(tk.END, f"OS: {os}\nVersión: {version}\n\n")
+                        print("-----")
+            else: 
+                resul_text.insert(tk.END, f"\n\nNo hay OS detectado para el agente {agent}\n\n")
+        else:
+            print(f"Error {inv_os.status_code}: {inv_os.json().get('message', 'Unknown error')}")
+    
+
+ def traer_pack (*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
+    for agent in ids:
+        inv_packages = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/packages?pretty=true&limit=50", headers=requests_headers, verify=False)
+        data = json.loads(inv_packages.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            resul_text.insert(tk.END, f"Agente: {agent}\n\n")
+            for item in data:
+                name = item.get('name', 'Desconocido')
+                version = item.get('version', 'Desconocido')
+                vendor = item.get('vendor', 'Desconocido')
+                agent_id = item['agent_id']
+                resul_text.insert(tk.END, f"Nombre: {name}\nVersion: {version}\nProveedor: {vendor}\nID agente: {agent_id}\n\n")
+        else: 
+            resul_text.insert(tk.END, f"\n\nNo hay paquetes para el agente {agent}\n\n")
+
+ def traer_puertos(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+    
+    for agent in ids:
+        inv_ports = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/ports?pretty=true", headers=requests_headers, verify=False)
+        data = json.loads(inv_ports.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            resul_text.insert(tk.END, f"Agente: {agent}\n\n")
+            for item in data:
+                local_ip = item["local"].get("ip", "Desconocido")
+                protocolo = item.get("protocol", "Desconocido")
+                state = item.get("state", "Desconocido")
+                agent_id = item.get("agent_id", "Desconocido")
+                resul_text.insert(tk.END, f"Local IP: {local_ip}\nProtocol: {protocolo}\nState: {state}\nAgent ID: {agent_id}\n\n")
+        else: 
+            resul_text.insert(tk.END, f"\n\nNo se encontraron puertos para el agente {agent}\n\n")
+
+ def traer_procesos(*args):
+    global protocol
+    global host 
+    global port
+    global requests_headers
+    resul_text.delete("1.0", tk.END)
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+    
+    for agent in ids:
+        inv_processes = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/processes?pretty=true&limit=50", headers=requests_headers, verify=False)
+        data = json.loads(inv_processes.text)
+        if "data" in data:
+            data = data["data"]["affected_items"]
+            resul_text.insert(tk.END, f"\nAgente: {agent}\n\n")
+            for item in data:
+                name = item.get("name", "Desconocido")
+                priority = item.get("priority", "Desconocido")
+                start_time = item.get("start_time", "Desconocido")
+                agent_id = item.get("agent_id", "Desconocido")
+                resul_text.insert(tk.END, f"\n\nName: {name}\nPriority: {priority}\nStart Time: {start_time}\nID agente: {agent_id}\n")
+        else: 
+            resul_text.insert(tk.END, f"\n\nNo se encontraron procesos para el agente {agent}\n\n")
+
+
+
  nueva_ventana = tk.Tk()
  nueva_ventana.title("Opciones avanzadas")
  nueva_ventana.geometry("600x600")
@@ -404,12 +751,16 @@ def ir_extras (*args):
  frame_resul.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
  frame_botones = tk.Frame(frame_principal)
  frame_botones.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
+ frame_botones2 = tk.Frame(frame_principal)
+ frame_botones2.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
+ frame_botones3 = tk.Frame(frame_principal)
+ frame_botones3.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10, expand=True)
  #Etiqueta para resultados
  lbl_resul = tk.Label(frame_resul, text="Resultados de consultas:")
  lbl_resul.pack(side=tk.TOP)
  #Crea el cuadro de resultados
  resul_text = tk.Text(frame_resul, height=10)
- resul_text.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+ resul_text.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10)
  # Botón de Estado
  btn_estado = tk.Button(frame_botones, text="Estado del servidor", command=consultar_estado)
  btn_estado.pack(side=tk.LEFT, padx=10, pady=10)
@@ -422,6 +773,40 @@ def ir_extras (*args):
  # Botón de Logs resumen
  btn_config = tk.Button(frame_botones, text="Ver resumen de logs", command=ver_resumen)
  btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de traer grupos
+ btn_config = tk.Button(frame_botones2, text="Traer Grupos", command=traer_grupos)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de estado de tareas
+ btn_config = tk.Button(frame_botones2, text="Traer tareas", command=traer_tareas)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de Info de hardware
+ btn_config = tk.Button(frame_botones2, text="Información de hardware", command=info_hard)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de Info de hotfixes
+ btn_config = tk.Button(frame_botones2, text="Traer hotfixes", command=traer_hotfix)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de Info de ip
+ btn_config = tk.Button(frame_botones2, text="Consultar IP", command=traer_ip)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de interfaz
+ btn_config = tk.Button(frame_botones3, text="Ver Interfaces", command=traer_interfaz)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+# Botón de routeo
+ btn_config = tk.Button(frame_botones3, text="Ver routing", command=traer_ruteo)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de sistema operativo
+ btn_config = tk.Button(frame_botones3, text="Ver SO", command=traer_so)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+ # Botón de paquetes
+ btn_config = tk.Button(frame_botones3, text="Ver paquetes", command=traer_pack)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+  # Botón de puertos
+ btn_config = tk.Button(frame_botones3, text="Ver puertos", command=traer_puertos)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+  # Botón de procesos
+ btn_config = tk.Button(frame_botones3, text="Ver procesos", command=traer_procesos)
+ btn_config.pack(side=tk.LEFT, padx=10, pady=10)
+
  nueva_ventana.mainloop()
 
 # Crea las listas para los agentes y los grupos

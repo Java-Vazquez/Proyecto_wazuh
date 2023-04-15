@@ -52,7 +52,8 @@ print("\nGetting agents status summary:")
 #EJEMPLO DE BUSQUEDA POR VULNERABILIDADES
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&limit=800", headers=requests_headers, verify=False)
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
-#1vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/show?search=", headers=requests_headers, verify=False)
-#print(vulnerabilidades.text)
-st_logs = requests.get(f"{protocol}://{host}:{port}/manager/logs/summary?pretty=true", headers=requests_headers, verify=False)
-print(st_logs.text)
+agent = '001'
+palabra_clave = "MySQL"
+vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={palabra_clave}", headers=requests_headers, verify=False)
+print(vul_search.text)
+
