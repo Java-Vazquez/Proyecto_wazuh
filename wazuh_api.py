@@ -13,7 +13,7 @@ ventana = tk.Tk()
 # Define el título de la ventana
 ventana.title("Consulta Wazuh")
 # Define las dimensiones de la ventana
-ventana.geometry("1200x400")
+ventana.geometry("1200x500")
 # Crea el frame principal
 frame_principal = tk.Frame(ventana)
 frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -115,74 +115,85 @@ def consultar_severidad(*args):
     global requests_headers
     severidad = severidad_seleccionado.get()
     resultados_text.delete("1.0", tk.END)
-    
+    ids = []
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    resp = json.loads(response.content.decode())['data']['affected_items'] 
+    for i in resp:
+        nombre = i['id'] # Obtener el nombre del elemento actual
+        ids.append(nombre)
+
     if severidad == "Todas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-        todas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
-        todas.raise_for_status()
-        datos = json.loads(todas.text)
-        try: 
-            if 'data' in datos and 'affected_items' in datos['data']:
-                for item in datos['data']['affected_items']:
-                    if 'title' in item:
-                        resultados_text.insert(tk.END, item['title'] + "\n")
-        except requests.exceptions.HTTPError as error:
-            print(f"Error al hacer la petición: {error}")
+        for agente in ids: 
+            todas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+            todas.raise_for_status()
+            datos = json.loads(todas.text)
+            try: 
+                if 'data' in datos and 'affected_items' in datos['data']:
+                    for item in datos['data']['affected_items']:
+                        if 'title' in item:
+                            resultados_text.insert(tk.END, item['title'] + "\n")
+            except requests.exceptions.HTTPError as error:
+                print(f"Error al hacer la petición: {error}")
 
     elif severidad =="Críticas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-        criticas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,&pretty=true", headers=requests_headers, verify=False)
-        criticas.raise_for_status()
-        datos = json.loads(criticas.text)
-        try: 
-            if 'data' in datos and 'affected_items' in datos['data']:
-                for item in datos['data']['affected_items']:
-                    if 'title' in item:
-                        resultados_text.insert(tk.END, item['title'] + "\n")
-        except requests.exceptions.HTTPError as error:
-            print(f"Error al hacer la petición: {error}")
+        for agente in ids:
+            criticas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,&pretty=true", headers=requests_headers, verify=False)
+            criticas.raise_for_status()
+            datos = json.loads(criticas.text)
+            try: 
+                if 'data' in datos and 'affected_items' in datos['data']:
+                    for item in datos['data']['affected_items']:
+                        if 'title' in item:
+                            resultados_text.insert(tk.END, item['title'] + "\n")
+            except requests.exceptions.HTTPError as error:
+                print(f"Error al hacer la petición: {error}")
 
 
     elif severidad == "Altas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-        altas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=High&pretty=true", headers=requests_headers, verify=False)
-        altas.raise_for_status()
-        datos = json.loads(altas.text)
-        try: 
-            if 'data' in datos and 'affected_items' in datos['data']:
-                for item in datos['data']['affected_items']:
-                    if 'title' in item:
-                        resultados_text.insert(tk.END, item['title'] + "\n")
-        except requests.exceptions.HTTPError as error:
-            print(f"Error al hacer la petición: {error}")
+        for agente in ids:
+            altas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=High&pretty=true", headers=requests_headers, verify=False)
+            altas.raise_for_status()
+            datos = json.loads(altas.text)
+            try: 
+                if 'data' in datos and 'affected_items' in datos['data']:
+                    for item in datos['data']['affected_items']:
+                        if 'title' in item:
+                            resultados_text.insert(tk.END, item['title'] + "\n")
+            except requests.exceptions.HTTPError as error:
+                print(f"Error al hacer la petición: {error}")
 
     elif severidad == "Medias": 
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-        medias = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Medium&pretty=true", headers=requests_headers, verify=False)
-        medias.raise_for_status()
-        datos = json.loads(medias.text)
-        try: 
-            if 'data' in datos and 'affected_items' in datos['data']:
-                for item in datos['data']['affected_items']:
-                    if 'title' in item:
-                        resultados_text.insert(tk.END, item['title'] + "\n")
-        except requests.exceptions.HTTPError as error:
-            print(f"Error al hacer la petición: {error}")
+        for agente in ids:
+            medias = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Medium&pretty=true", headers=requests_headers, verify=False)
+            medias.raise_for_status()
+            datos = json.loads(medias.text)
+            try: 
+                if 'data' in datos and 'affected_items' in datos['data']:
+                    for item in datos['data']['affected_items']:
+                        if 'title' in item:
+                            resultados_text.insert(tk.END, item['title'] + "\n")
+            except requests.exceptions.HTTPError as error:
+                print(f"Error al hacer la petición: {error}")
 
     elif severidad == "Bajas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
-        bajas = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&pretty=true", headers=requests_headers, verify=False)
-        bajas.raise_for_status()
-        datos = json.loads(bajas.text)
-        try: 
-            if 'data' in datos and 'affected_items' in datos['data']:
-                for item in datos['data']['affected_items']:
-                    if 'title' in item:
-                        resultados_text.insert(tk.END, item['title'] + "\n")
-        except requests.exceptions.HTTPError as error:
-            print(f"Error al hacer la petición: {error}")
+        for agente in ids:
+            bajas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Low&pretty=true", headers=requests_headers, verify=False)
+            bajas.raise_for_status()
+            datos = json.loads(bajas.text)
+            try: 
+                if 'data' in datos and 'affected_items' in datos['data']:
+                    for item in datos['data']['affected_items']:
+                        if 'title' in item:
+                            resultados_text.insert(tk.END, item['title'] + "\n")
+            except requests.exceptions.HTTPError as error:
+                print(f"Error al hacer la petición: {error}")
     else:
-        severidad = severidad
+        resultados_text.insert(tk.END, "Seleccione un nivel de severidad")
 
     #resultados_text.insert(tk.END, "Agente seleccionado: " + agente + "\n")
     #resultados_text.insert(tk.END, "Grupo seleccionado: " + grupo + "\n")
@@ -392,6 +403,7 @@ def conectarse(*args):
     print(opciones_vulnerabilidades) # Imprimir la lista completa de nombres
 
 def mostrar_top_vul (*args):
+    resultados_text.delete("1.0", tk.END)
     vuln_counts = {}
     global opciones_vulnerabilidades_str
     opciones_vulnerabilidades = opciones_vulnerabilidades_str.get().split()
@@ -410,6 +422,7 @@ def mostrar_top_vul (*args):
 
 def mostrar_top_ag (*args):
     # Crear un diccionario para contar el número de vulnerabilidades por agente
+    resultados_text.delete("1.0", tk.END)
     agent_vuln_counts = {}
     ids = []
     response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
@@ -435,6 +448,7 @@ def mostrar_top_ag (*args):
     print("Top 10 agentes con más vulnerabilidades:")
     for i, (agent, count) in enumerate(top_agents):
         print(f"{i+1}. {agent}: {count} vulnerabilidades")
+        resultados_text.insert(tk.END,f"{i+1}. {agent}: {count} vulnerabilidades" + "\n")
 
 def ir_extras (*args):
  def consultar_estado(*args):

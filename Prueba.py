@@ -51,8 +51,21 @@ print("\nGetting agents status summary:")
 
 #EJEMPLO DE BUSQUEDA POR VULNERABILIDADES
 #vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Low&limit=800", headers=requests_headers, verify=False)
-#vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+vulnerabilidades = requests.get(f"{protocol}://{host}:{port}/vulnerability/001?q=severity=Medium&pretty=true", headers=requests_headers, verify=False)
+print(vulnerabilidades.text)
 
-vul_search = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true", headers=requests_headers, verify=False)
-print(vul_search.text)
+"""
+import json
+import xmltodict
 
+sample_json = {"note": {"to": "Tove", "from": "Jani", "heading": "Reminder", "body": "Don't forget me this weekend!"}}
+response = requests.get(f"{protocol}://{host}:{port}/agents/summary/status?pretty=true", headers=requests_headers, verify=False)
+response_dict = json.loads(response.text) 
+#############
+#json to xml
+#############
+xml = xmltodict.unparse({"root": response_dict})
+#json_to_xml = xmltodict.unparse(response_dict)
+print(xml)
+#############
+"""
