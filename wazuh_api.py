@@ -3,9 +3,13 @@ import json
 import requests
 import urllib3
 from base64 import b64encode
+import xml.etree.ElementTree as ET
+import os 
+
+
 
 protocol = 'https'
-host = '192.168.198.131'
+host = 'huzaw.up.edu.mx'
 port = 55000
 token = ""
 requests_headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
@@ -116,22 +120,100 @@ def consultar_severidad(*args):
     severidad = severidad_seleccionado.get()
     resultados_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
+    print(resp)
     for i in resp:
-        nombre = i['id'] # Obtener el nombre del elemento actual
+        nombre= i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
+    topic_map = ET.Element('topicMap', id="Vulnerabilidades por")
+    topic_agent =ET.SubElement(topic_map, 'topic', id = 'agente')
+    topic_vulne =ET.SubElement(topic_map, 'topic', id = 'vulnerabilidad')
+    topicNameAgent = ET.SubElement(ET.SubElement(topic_agent, 'baseName'), 'baseNameString')
+    topicNameAgent.text='Agente'
+    topicNameVulne= ET.SubElement(ET.SubElement(topic_vulne, 'baseName'), 'baseNameString')
+    topicNameVulne.text='Vulnerabilidad'
+
+    topic_resourceAffected =ET.SubElement(topic_map, 'topic', id = 'resource')
+    topicNameResource = ET.SubElement(ET.SubElement(topic_resourceAffected, 'baseName'), 'baseNameString')
+    topicNameResource.text='Recurso' #"MySQL Server 8.0",
+
+    topic_version=ET.SubElement(topic_map, 'topic', id = 'version')
+    topicNameVersion = ET.SubElement(ET.SubElement(topic_version, 'baseName'), 'baseNameString')
+    topicNameVersion.text='Version'
+
+    topic_Severity=ET.SubElement(topic_map, 'topic', id = 'severity')
+    topicNameSeverity= ET.SubElement(ET.SubElement(topic_Severity, 'baseName'), 'baseNameString')
+    topicNameSeverity.text='Severidad' #"severity": "Medium",
+    
+    topic_timeStampDetection=ET.SubElement(topic_map, 'topic', id = 'detection_time')
+    topicNametimeStamp= ET.SubElement(ET.SubElement(topic_timeStampDetection, 'baseName'), 'baseNameString')
+    topicNametimeStamp.text='Tiempo de Detección'
+   
+   
+    topic_Status=ET.SubElement(topic_map, 'topic', id = 'status')
+    topicNameStatus= ET.SubElement(ET.SubElement(topic_Status, 'baseName'), 'baseNameString')
+    topicNameStatus.text='Statis' #"status": "VALID"
+
+    for item in resp:
+        child = ET.SubElement(topic_map, 'topic', id=str(item['id']))
+        topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+        topic_ref.set('xlink:type', '#agente')
+        nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+        nombre.text = str(item['name'])
+
+    topic_assocation =ET.SubElement(topic_map, 'topic', id = 'VulnerableAgent-by')
+    topicNameAssociation = ET.SubElement(ET.SubElement(topic_assocation, 'baseName'), 'baseNameString')
+    topicNameAssociation.text='Vulnerable Agent by'
+   
     if severidad == "Todas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
         for agente in ids: 
-            todas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+            todas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true&limit=30", headers=requests_headers, verify=False)
             todas.raise_for_status()
             datos = json.loads(todas.text)
             try: 
                 if 'data' in datos and 'affected_items' in datos['data']:
                     for item in datos['data']['affected_items']:
-                        if 'title' in item:
+                         child = ET.SubElement(topic_map, 'topic', id=str(item['cve']))
+                         topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+                         topic_ref.set('xlink:type', '#vulnerabilidad')
+                         nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+                         nombre.text = str(item['title'])
+
+                         ocurrenceResource = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceResource = ET.SubElement(ET.SubElement(ocurrenceResource, 'instanceOf'), 'topicRef')
+                         refOcurrenceResource.set('xlink:type', '#resource')
+                         dataResource= ET.SubElement(ocurrenceResource, 'resourceData')
+                         dataResource.text = str(item['name'])
+
+                         ocurrenceStatus = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceStatus = ET.SubElement(ET.SubElement(ocurrenceStatus, 'instanceOf'), 'topicRef')
+                         refOcurrenceStatus.set('xlink:type', '#status')
+                         dataStatus= ET.SubElement(ocurrenceStatus, 'resourceData')
+                         dataStatus.text = str(item['status'])
+
+                         ocurrenceVersion = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceVersion = ET.SubElement(ET.SubElement(ocurrenceVersion, 'instanceOf'), 'topicRef')
+                         refOcurrenceVersion.set('xlink:type', '#version')
+                         dataVersion= ET.SubElement(ocurrenceVersion, 'resourceData')
+                         dataVersion.text = str(item['version'])
+
+                         ocurrenceSeverity = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceSeverity = ET.SubElement(ET.SubElement(ocurrenceSeverity, 'instanceOf'), 'topicRef')
+                         refOcurrenceSeverity.set('xlink:type', '#severity')
+                         dataSeverity= ET.SubElement(ocurrenceSeverity, 'resourceData')
+                         dataSeverity.text = str(item['severity'])
+
+
+                         ocurrenceTimeStamp = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceTimeStamp = ET.SubElement(ET.SubElement(ocurrenceTimeStamp, 'instanceOf'), 'topicRef')
+                         refOcurrenceTimeStamp.set('xlink:type', '#detecion_time')
+                         dataTimeStamp= ET.SubElement(ocurrenceTimeStamp, 'resourceData')
+                         dataTimeStamp.text = str(item['detection_time'])
+
+                         if 'title' in item:
                             resultados_text.insert(tk.END, item['title'] + "\n")
             except requests.exceptions.HTTPError as error:
                 print(f"Error al hacer la petición: {error}")
@@ -139,13 +221,50 @@ def consultar_severidad(*args):
     elif severidad =="Críticas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
         for agente in ids:
-            criticas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,&pretty=true", headers=requests_headers, verify=False)
+            criticas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Critical,&pretty=true&limit=30", headers=requests_headers, verify=False)
             criticas.raise_for_status()
             datos = json.loads(criticas.text)
             try: 
                 if 'data' in datos and 'affected_items' in datos['data']:
                     for item in datos['data']['affected_items']:
-                        if 'title' in item:
+                         child = ET.SubElement(topic_map, 'topic', id=str(item['cve']))
+                         topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+                         topic_ref.set('xlink:type', '#vulnerabilidad')
+                         nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+                         nombre.text = str(item['title'])
+
+                         ocurrenceResource = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceResource = ET.SubElement(ET.SubElement(ocurrenceResource, 'instanceOf'), 'topicRef')
+                         refOcurrenceResource.set('xlink:type', '#resource')
+                         dataResource= ET.SubElement(ocurrenceResource, 'resourceData')
+                         dataResource.text = str(item['name'])
+
+                         ocurrenceStatus = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceStatus = ET.SubElement(ET.SubElement(ocurrenceStatus, 'instanceOf'), 'topicRef')
+                         refOcurrenceStatus.set('xlink:type', '#status')
+                         dataStatus= ET.SubElement(ocurrenceStatus, 'resourceData')
+                         dataStatus.text = str(item['status'])
+
+                         ocurrenceVersion = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceVersion = ET.SubElement(ET.SubElement(ocurrenceVersion, 'instanceOf'), 'topicRef')
+                         refOcurrenceVersion.set('xlink:type', '#version')
+                         dataVersion= ET.SubElement(ocurrenceVersion, 'resourceData')
+                         dataVersion.text = str(item['version'])
+
+                         ocurrenceSeverity = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceSeverity = ET.SubElement(ET.SubElement(ocurrenceSeverity, 'instanceOf'), 'topicRef')
+                         refOcurrenceSeverity.set('xlink:type', '#severity')
+                         dataSeverity= ET.SubElement(ocurrenceSeverity, 'resourceData')
+                         dataSeverity.text = str(item['severity'])
+
+
+                         ocurrenceTimeStamp = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceTimeStamp = ET.SubElement(ET.SubElement(ocurrenceTimeStamp, 'instanceOf'), 'topicRef')
+                         refOcurrenceTimeStamp.set('xlink:type', '#detecion_time')
+                         dataTimeStamp= ET.SubElement(ocurrenceTimeStamp, 'resourceData')
+                         dataTimeStamp.text = str(item['detection_time'])
+
+                         if 'title' in item:
                             resultados_text.insert(tk.END, item['title'] + "\n")
             except requests.exceptions.HTTPError as error:
                 print(f"Error al hacer la petición: {error}")
@@ -154,13 +273,50 @@ def consultar_severidad(*args):
     elif severidad == "Altas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
         for agente in ids:
-            altas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=High&pretty=true", headers=requests_headers, verify=False)
+            altas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=High&pretty=true&limit=30", headers=requests_headers, verify=False)
             altas.raise_for_status()
             datos = json.loads(altas.text)
             try: 
                 if 'data' in datos and 'affected_items' in datos['data']:
                     for item in datos['data']['affected_items']:
-                        if 'title' in item:
+                         child = ET.SubElement(topic_map, 'topic', id=str(item['cve']))
+                         topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+                         topic_ref.set('xlink:type', '#vulnerabilidad')
+                         nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+                         nombre.text = str(item['title'])
+
+                         ocurrenceResource = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceResource = ET.SubElement(ET.SubElement(ocurrenceResource, 'instanceOf'), 'topicRef')
+                         refOcurrenceResource.set('xlink:type', '#resource')
+                         dataResource= ET.SubElement(ocurrenceResource, 'resourceData')
+                         dataResource.text = str(item['name'])
+
+                         ocurrenceStatus = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceStatus = ET.SubElement(ET.SubElement(ocurrenceStatus, 'instanceOf'), 'topicRef')
+                         refOcurrenceStatus.set('xlink:type', '#status')
+                         dataStatus= ET.SubElement(ocurrenceStatus, 'resourceData')
+                         dataStatus.text = str(item['status'])
+
+                         ocurrenceVersion = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceVersion = ET.SubElement(ET.SubElement(ocurrenceVersion, 'instanceOf'), 'topicRef')
+                         refOcurrenceVersion.set('xlink:type', '#version')
+                         dataVersion= ET.SubElement(ocurrenceVersion, 'resourceData')
+                         dataVersion.text = str(item['version'])
+
+                         ocurrenceSeverity = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceSeverity = ET.SubElement(ET.SubElement(ocurrenceSeverity, 'instanceOf'), 'topicRef')
+                         refOcurrenceSeverity.set('xlink:type', '#severity')
+                         dataSeverity= ET.SubElement(ocurrenceSeverity, 'resourceData')
+                         dataSeverity.text = str(item['severity'])
+
+
+                         ocurrenceTimeStamp = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceTimeStamp = ET.SubElement(ET.SubElement(ocurrenceTimeStamp, 'instanceOf'), 'topicRef')
+                         refOcurrenceTimeStamp.set('xlink:type', '#detecion_time')
+                         dataTimeStamp= ET.SubElement(ocurrenceTimeStamp, 'resourceData')
+                         dataTimeStamp.text = str(item['detection_time'])
+
+                         if 'title' in item:
                             resultados_text.insert(tk.END, item['title'] + "\n")
             except requests.exceptions.HTTPError as error:
                 print(f"Error al hacer la petición: {error}")
@@ -168,13 +324,50 @@ def consultar_severidad(*args):
     elif severidad == "Medias": 
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
         for agente in ids:
-            medias = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Medium&pretty=true", headers=requests_headers, verify=False)
+            medias = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Medium&pretty=true&limit=30", headers=requests_headers, verify=False)
             medias.raise_for_status()
             datos = json.loads(medias.text)
             try: 
                 if 'data' in datos and 'affected_items' in datos['data']:
                     for item in datos['data']['affected_items']:
-                        if 'title' in item:
+                         child = ET.SubElement(topic_map, 'topic', id=str(item['cve']))
+                         topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+                         topic_ref.set('xlink:type', '#vulnerabilidad')
+                         nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+                         nombre.text = str(item['title'])
+
+                         ocurrenceResource = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceResource = ET.SubElement(ET.SubElement(ocurrenceResource, 'instanceOf'), 'topicRef')
+                         refOcurrenceResource.set('xlink:type', '#resource')
+                         dataResource= ET.SubElement(ocurrenceResource, 'resourceData')
+                         dataResource.text = str(item['name'])
+
+                         ocurrenceStatus = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceStatus = ET.SubElement(ET.SubElement(ocurrenceStatus, 'instanceOf'), 'topicRef')
+                         refOcurrenceStatus.set('xlink:type', '#status')
+                         dataStatus= ET.SubElement(ocurrenceStatus, 'resourceData')
+                         dataStatus.text = str(item['status'])
+
+                         ocurrenceVersion = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceVersion = ET.SubElement(ET.SubElement(ocurrenceVersion, 'instanceOf'), 'topicRef')
+                         refOcurrenceVersion.set('xlink:type', '#version')
+                         dataVersion= ET.SubElement(ocurrenceVersion, 'resourceData')
+                         dataVersion.text = str(item['version'])
+
+                         ocurrenceSeverity = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceSeverity = ET.SubElement(ET.SubElement(ocurrenceSeverity, 'instanceOf'), 'topicRef')
+                         refOcurrenceSeverity.set('xlink:type', '#severity')
+                         dataSeverity= ET.SubElement(ocurrenceSeverity, 'resourceData')
+                         dataSeverity.text = str(item['severity'])
+
+
+                         ocurrenceTimeStamp = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceTimeStamp = ET.SubElement(ET.SubElement(ocurrenceTimeStamp, 'instanceOf'), 'topicRef')
+                         refOcurrenceTimeStamp.set('xlink:type', '#detecion_time')
+                         dataTimeStamp= ET.SubElement(ocurrenceTimeStamp, 'resourceData')
+                         dataTimeStamp.text = str(item['detection_time'])
+
+                         if 'title' in item:
                             resultados_text.insert(tk.END, item['title'] + "\n")
             except requests.exceptions.HTTPError as error:
                 print(f"Error al hacer la petición: {error}")
@@ -182,13 +375,49 @@ def consultar_severidad(*args):
     elif severidad == "Bajas":
         resultados_text.insert(tk.END, "Severidad seleccionada: " + severidad + "\n")
         for agente in ids:
-            bajas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Low&pretty=true", headers=requests_headers, verify=False)
+            bajas = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=severity=Low&pretty=true&limit=30", headers=requests_headers, verify=False)
             bajas.raise_for_status()
             datos = json.loads(bajas.text)
             try: 
                 if 'data' in datos and 'affected_items' in datos['data']:
                     for item in datos['data']['affected_items']:
-                        if 'title' in item:
+                         child = ET.SubElement(topic_map, 'topic', id=str(item['cve']))
+                         topic_ref=ET.SubElement(ET.SubElement(child, 'instanceOf'), 'topicRef')
+                         topic_ref.set('xlink:type', '#vulnerabilidad')
+                         nombre=ET.SubElement(ET.SubElement(child, 'baseName'), 'baseNameString')
+                         nombre.text = str(item['title'])
+
+                         ocurrenceResource = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceResource = ET.SubElement(ET.SubElement(ocurrenceResource, 'instanceOf'), 'topicRef')
+                         refOcurrenceResource.set('xlink:type', '#resource')
+                         dataResource= ET.SubElement(ocurrenceResource, 'resourceData')
+                         dataResource.text = str(item['name'])
+
+                         ocurrenceStatus = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceStatus = ET.SubElement(ET.SubElement(ocurrenceStatus, 'instanceOf'), 'topicRef')
+                         refOcurrenceStatus.set('xlink:type', '#status')
+                         dataStatus= ET.SubElement(ocurrenceStatus, 'resourceData')
+                         dataStatus.text = str(item['status'])
+
+                         ocurrenceVersion = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceVersion = ET.SubElement(ET.SubElement(ocurrenceVersion, 'instanceOf'), 'topicRef')
+                         refOcurrenceVersion.set('xlink:type', '#version')
+                         dataVersion= ET.SubElement(ocurrenceVersion, 'resourceData')
+                         dataVersion.text = str(item['version'])
+
+                         ocurrenceSeverity = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceSeverity = ET.SubElement(ET.SubElement(ocurrenceSeverity, 'instanceOf'), 'topicRef')
+                         refOcurrenceSeverity.set('xlink:type', '#severity')
+                         dataSeverity= ET.SubElement(ocurrenceSeverity, 'resourceData')
+                         dataSeverity.text = str(item['severity'])
+
+
+                         ocurrenceTimeStamp = ET.SubElement(child, 'ocurrence')
+                         refOcurrenceTimeStamp = ET.SubElement(ET.SubElement(ocurrenceTimeStamp, 'instanceOf'), 'topicRef')
+                         refOcurrenceTimeStamp.set('xlink:type', '#detecion_time')
+                         dataTimeStamp= ET.SubElement(ocurrenceTimeStamp, 'resourceData')
+                         dataTimeStamp.text = str(item['detection_time'])
+                         if 'title' in item:
                             resultados_text.insert(tk.END, item['title'] + "\n")
             except requests.exceptions.HTTPError as error:
                 print(f"Error al hacer la petición: {error}")
@@ -201,6 +430,12 @@ def consultar_severidad(*args):
 
     print("Severidad seleccionada:", severidad)
 
+    # create an XML tree to represent the topic map
+
+    tree =ET.ElementTree(topic_map)
+    ET.indent(tree, space="\t")
+    tree.write('topic_mapVulnerabilitiesAgents.hytm.xtm',encoding='utf-8', xml_declaration=True)
+
 def consultar_cve (*args):
     global protocol
     global host 
@@ -210,14 +445,14 @@ def consultar_cve (*args):
     resultados_text.delete("1.0", tk.END)
 
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
     for agente in ids:
-        common_vul = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=cve={vulnerabilidad}&limit=800&pretty=true", headers=requests_headers, verify=False)
+        common_vul = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agente}?q=cve={vulnerabilidad}&limit=10&pretty=true", headers=requests_headers, verify=False)
         #print(common_vul.text)
         data = json.loads(common_vul.text)
         affected_items = data.get("data", {}).get("affected_items", [])
@@ -237,7 +472,7 @@ def consultar_cve (*args):
     resultados_text.insert(tk.END,"Agentes con la vulnerabilidad "+ vulnerabilidad +" : " + "\n")
     
     for agent in ids:
-        vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={vulnerabilidad}", headers=requests_headers, verify=False)
+        vul_search = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?search={vulnerabilidad}&limit=10", headers=requests_headers, verify=False)
         data = json.loads(vul_search.text)
         affected_items = data.get("data", {}).get("affected_items", [])
         if affected_items:
@@ -264,6 +499,8 @@ def consultar_agente (*args):
         resultados_text.insert(tk.END,agente + "\n" + "Sistema operativo: " + name + "\n" + "Plataforma: "+ platform + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "IP: "+ ip + "\n" + "ID: "+ id + "\n")
     else: 
         resultados_text.insert(tk.END, "No hay agente seleccionado.\n")
+
+    
 def consultar_grupos(*args):
     global protocol
     global host 
@@ -272,7 +509,7 @@ def consultar_grupos(*args):
     grupo = grupo_seleccionado.get()
     if grupo:
         resultados_text.delete("1.0", tk.END)
-        solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true", headers=requests_headers, verify=False)
+        solicitud = requests.get(f"{protocol}://{host}:{port}/groups?search={grupo}&pretty=true&limit=10", headers=requests_headers, verify=False)
         data =json.loads(solicitud.text)
         if data['data']['affected_items']:
             count = data['data']['affected_items'][0]['count']
@@ -294,7 +531,7 @@ def buscar(*args):
         resultados_text.delete("1.0", tk.END)
         resultados_text.insert(tk.END,"Búsqueda de vulnerabilidades para: " + palabra_clave + "\n") 
         ids = []
-        response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+        response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
         resp = json.loads(response.content.decode())['data']['affected_items'] 
         for i in resp:
             id = i['id'] # Obtener el nombre del elemento actual
@@ -336,8 +573,8 @@ def conectarse(*args):
     global protocol 
     global host
     global port 
-    user = 'wazuh'
-    password = 'wazuh'
+    user = 'wazuh-wui'
+    password = 'ndlK?HpYHC6fP9a9fj+bZXRbLo1NMky9'
     login_endpoint = 'security/user/authenticate'
     login_url = f"{protocol}://{host}:{port}/{login_endpoint}"
     basic_auth = f"{user}:{password}".encode()
@@ -354,7 +591,7 @@ def conectarse(*args):
     ids=[]
     opciones = []
     #Solicitud y proceso para obtener y mostrar los agentes y grupos
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False) # Solicitud de los agentes
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False) # Solicitud de los agentes
     #print(response.text) #Imprime el Json
     resp = json.loads(response.content.decode())['data']['affected_items'] #Así se convierte y maneja como un objeto por bloques 
     for i in resp:
@@ -364,7 +601,7 @@ def conectarse(*args):
         opciones.append(nombre)
 
     grupos_opc = []
-    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true", headers=requests_headers, verify=False)
+    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true&limit=10", headers=requests_headers, verify=False)
     data =json.loads(respuesta.text)
     grupos = data['data']['affected_items']
     for group in grupos:
@@ -380,7 +617,7 @@ def conectarse(*args):
     cves = []
     # Solicitud para las severidades existentes
     for agent in ids:
-        response2 = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true", headers=requests_headers, verify=False)
+        response2 = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=severity=Critical,severity=High,severity=Medium,severity=Low&pretty=true&limit=30", headers=requests_headers, verify=False)
         data2 = json.loads(response2.text)
         affected_items = data2.get("data", {}).get("affected_items", [])
         if affected_items:
@@ -425,7 +662,7 @@ def mostrar_top_ag (*args):
     resultados_text.delete("1.0", tk.END)
     agent_vuln_counts = {}
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=15", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         id = i['id'] # Obtener el nombre del elemento actual
@@ -436,7 +673,7 @@ def mostrar_top_ag (*args):
     for vuln in opciones_vulnerabilidades:
         affected_agents = set()
         for agent in ids:
-            response = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=cve={vuln}&pretty=true", headers=requests_headers, verify=False)
+            response = requests.get(f"{protocol}://{host}:{port}/vulnerability/{agent}?q=cve={vuln}&pretty=true&limit=15", headers=requests_headers, verify=False)
             data = json.loads(response.text)
             affected_items = data.get("data", {}).get("affected_items", [])
             if affected_items:
@@ -540,7 +777,7 @@ def ir_extras (*args):
     global port
     global requests_headers
     resul_text.delete("1.0", tk.END)
-    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true", headers=requests_headers, verify=False)
+    respuesta = requests.get(f"{protocol}://{host}:{port}/groups?pretty=true&limit=10", headers=requests_headers, verify=False)
     data =json.loads(respuesta.text)
     grupos = data['data']['affected_items']
     i = 1
@@ -562,7 +799,9 @@ def ir_extras (*args):
     else: 
         info = data['data']['affected_items']
         for item in info:
-            resul_text.insert(tk.END,item + ": " + info[item] + "\n")
+            for key, value in item.items():
+                resul_text.insert(tk.END, f"{key}: {value}\n")
+
 
  def info_hard (*args):
     global protocol
@@ -571,7 +810,7 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
@@ -605,7 +844,7 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
@@ -631,14 +870,14 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
     
     for agent in ids:
-        inv_netaddr = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netaddr?pretty=true", headers=requests_headers, verify=False)
+        inv_netaddr = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netaddr?pretty=true&limit=10", headers=requests_headers, verify=False)
         data = json.loads(inv_netaddr.text)
         if "data" in data:
             data = data["data"]["affected_items"]
@@ -658,14 +897,14 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
     for agent in ids:
-        inv_netiface = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netiface?pretty=true", headers=requests_headers, verify=False)
+        inv_netiface = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netiface?pretty=true&limit=10", headers=requests_headers, verify=False)
         data = json.loads(inv_netiface.text)
         if "data" in data:
             data = data["data"]["affected_items"]
@@ -688,14 +927,14 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
     for agent in ids:
-        inv_netproto = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netproto?pretty=true", headers=requests_headers, verify=False)
+        inv_netproto = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/netproto?pretty=true&limit=10", headers=requests_headers, verify=False)
         data = json.loads(inv_netproto.text)
         if "data" in data:
             data = data["data"]["affected_items"]
@@ -718,14 +957,14 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
 
     for agent in ids:
-        inv_os = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/os?pretty=true", headers=requests_headers, verify=False)
+        inv_os = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/os?pretty=true&limit=10", headers=requests_headers, verify=False)
         data = json.loads(inv_os.text)
         if inv_os.status_code == 200:
             if "data" in data:
@@ -755,7 +994,7 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
@@ -783,14 +1022,14 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
         ids.append(nombre)
     
     for agent in ids:
-        inv_ports = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/ports?pretty=true", headers=requests_headers, verify=False)
+        inv_ports = requests.get(f"{protocol}://{host}:{port}/syscollector/{agent}/ports?pretty=true&limit=10", headers=requests_headers, verify=False)
         data = json.loads(inv_ports.text)
         if "data" in data:
             data = data["data"]["affected_items"]
@@ -811,7 +1050,7 @@ def ir_extras (*args):
     global requests_headers
     resul_text.delete("1.0", tk.END)
     ids = []
-    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true", headers=requests_headers, verify=False)
+    response = requests.get(f"{protocol}://{host}:{port}/agents?pretty=true&limit=10", headers=requests_headers, verify=False)
     resp = json.loads(response.content.decode())['data']['affected_items'] 
     for i in resp:
         nombre = i['id'] # Obtener el nombre del elemento actual
@@ -1153,3 +1392,4 @@ btn_actualizar.pack(side=tk.LEFT, padx=10, pady=10)
 
 #Loop principal para la visualización
 ventana.mainloop()
+
