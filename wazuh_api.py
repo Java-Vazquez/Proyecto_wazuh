@@ -465,7 +465,7 @@ def consultar_cve (*args):
                 version = item.get('version')
                 status = item.get('status')
                 severity = item.get('severity')
-                resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: "+ updated + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
+                resultados_text.insert(tk.END,vulnerabilidad + "\n" + "Nombre: " + name + "\n" + "Actualización: " + str(updated) + "\n" + "Versión: " + version + "\n"+ "Estado: " + status + "\n" + "Severidad: "+ severity + "\n")
                 print("Severidad seleccionada:", vulnerabilidad)
                 resultados_text.insert(tk.END, f"\n-------------------\n\n") 
 
